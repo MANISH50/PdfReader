@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../platform/platform_services.dart';
+import '../features/export/exporters.dart';
 import 'export/exporter.dart';
 import 'models/app_settings.dart';
 import 'pdf/document_service.dart';
@@ -26,7 +27,7 @@ final documentServiceProvider =
 final pageEditorProvider = Provider<PageEditor>((ref) => throw UnimplementedError('Editing agent'));
 final saveServiceProvider = Provider<SaveService>((ref) => throw UnimplementedError('Editing agent'));
 // Export agent:
-final exportersProvider = Provider<List<Exporter>>((ref) => const []);
+final exportersProvider = Provider<List<Exporter>>(buildExporters);
 // Platform agent:
 final incomingFileServiceProvider =
     Provider<IncomingFileService>((ref) => throw UnimplementedError('Platform agent'));
