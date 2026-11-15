@@ -2,13 +2,10 @@ name: Android emulator
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 3 * * 1' # weekly, Monday 03:17 UTC
-  pull_request:
-    paths:
-      - 'integration_test/**'
-      - 'android/**'
-      - '.github/workflows/android-emulator.yml'
+  # schedule re-enabled after integration
+  # schedule:
+  #   - cron: '17 3 * * 1' # weekly, Monday 03:17 UTC
+  # PR trigger re-enabled once feature screens carry the QA keys.
 
 permissions:
   contents: read

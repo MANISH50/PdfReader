@@ -61,7 +61,8 @@ except ImportError:  # pragma: no cover
     HAVE_SHAPING = False
 
 MANIFEST_VERSION = 1
-GOOGLE_FONTS_RAW = "https://raw.githubusercontent.com/google/fonts/main/ofl"
+# Pinned google/fonts commit so the corpus is reproducible.
+GOOGLE_FONTS_RAW = "https://raw.githubusercontent.com/google/fonts/cc39c4c2c304bc368c9b7c311ea2bcc6013299fe/ofl"
 NOTO = {
     "arabic": ("notosansarabic", "NotoSansArabic"),
     "hebrew": ("notosanshebrew", "NotoSansHebrew"),

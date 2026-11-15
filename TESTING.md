@@ -66,7 +66,7 @@ and `fails_or_opens` (either result is fine; it must never hang or crash).
 flutter analyze
 flutter test                                   # everything under test/
 flutter test test/qa/corpus_open_test.dart     # engine robustness only
-QA_CORPUS_DIR=build/corpus flutter test test/qa/corpus_open_test.dart   # a freshly generated corpus (incl. huge.pdf)
+QA_CORPUS_DIR=build/corpus QA_HUGE_DIR=build/corpus flutter test test/qa/corpus_open_test.dart   # fresh corpus incl. huge.pdf
 ```
 
 PDFium in `flutter test`: the `pdfium_dart` build hook downloads the PDFium binary (from

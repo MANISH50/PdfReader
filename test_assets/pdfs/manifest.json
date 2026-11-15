@@ -9,7 +9,7 @@
   ],
   "expectLegend": {
     "opens": "Must open, report the page count, render page 1 and load text.",
-    "needs_password": "Must ask for a password; opens with 'password'; wrong password -> failure.",
+    "needs_password": "Must ask for a password; opens with 'test123'; wrong password -> failure.",
     "fails": "Must fail gracefully with DocumentOpenException(failure) - never hang or crash.",
     "fails_or_opens": "Either opens (possibly with recovered pages) or fails with DocumentOpenException - never hangs or crashes."
   },
