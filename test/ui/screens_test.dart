@@ -146,7 +146,7 @@ void main() {
       await tester.tap(find.text('Get started'));
       await tester.pumpAndSettle();
       expect(AppSettings.fromJson(h.store.data['settings']! as Map<String, Object?>).onboardingDone, isTrue);
-      expect(find.text('Library'), findsWidgets);
+      expect(find.text('PdfReader'), findsWidgets);
     });
 
     testWidgets('skip finishes immediately', (tester) async {
@@ -154,7 +154,7 @@ void main() {
       await h.pump(tester, Routes.onboarding);
       await tester.tap(find.text('Skip'));
       await tester.pumpAndSettle();
-      expect(find.text('Library'), findsWidgets);
+      expect(find.text('PdfReader'), findsWidgets);
     });
 
     testWidgets('iOS shows the Share-sheet steps and the default-app caveat', (tester) async {

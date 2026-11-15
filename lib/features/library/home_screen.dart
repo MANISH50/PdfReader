@@ -79,7 +79,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final List<Widget> slivers;
     if (recents.isLoading && !recents.hasValue) {
       slivers = [
-        const SliverFillOrFit(child: AdaptiveProgress(size: 28)),
+        // Static (not a spinner): loading is near-instant, and an endless
+        // animation would also keep widget tests from settling.
+        const SliverFillOrFit(child: SizedBox.shrink()),
       ];
     } else if (all.isEmpty) {
       slivers = [
@@ -177,7 +179,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return AppScaffold(
       key: const Key('home.screen'),
-      title: 'Library',
+      title: 'PdfReader',
       maxContentWidth: wide ? 1200 : kMaxContentWidth,
       actions: [
         IconButton(
