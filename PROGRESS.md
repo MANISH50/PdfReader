@@ -16,7 +16,7 @@ Feature work is on per-agent branches; paused agents keep their work and resume 
 | Editing | **Merged** (annotations + undo, signatures, organizer, merge/split, flatten to real PDF content, form filling, safe save). Gaps: edited copies of encrypted PDFs saved unencrypted; merge/split drop form fields & bookmarks |
 | Export | **Merged** after review fixes (PNG/JPG, TXT, DOCX, PDF with edits; streamed zips; PDFium work on pdfrx worker) |
 | QA | **Merged** (corpus, engine robustness tests, helpers, integration tests, CI). Follow-ups: fake DocumentService limits, split active content out of text_multi.pdf |
-| Platform | Resumed (running) |
+| Platform | **Merged** (open-with/share-in on Android & iOS with safe copy-in, share-out, system file picker, no INTERNET/storage permissions in release manifest). TODO: inbox cleanup when removed from recents; onboarding to use `DefaultAppInfo` + open-settings button |
 | UI | **Merged** (design system, home, onboarding, settings, icon & splash, accessibility tests). TODO: multi-file merge from Home, real thumbnails |
 | Security | Pre-scan for decompression bombs in progress (paused, last) |
 

@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/editor/engine/pdfrx_page_editor.dart';
 import '../features/editor/save/file_save_service.dart';
 import '../features/editor/signature/signature_store.dart';
+import '../platform/file_pick_service_impl.dart';
+import '../platform/incoming_file_service_impl.dart';
 import '../platform/platform_services.dart';
 import '../features/export/exporters.dart';
+import '../platform/share_service_impl.dart';
 import 'export/exporter.dart';
 import 'models/app_settings.dart';
 import 'pdf/document_service.dart';
@@ -33,11 +36,14 @@ final saveServiceProvider = Provider<SaveService>((ref) => FileSaveService(ref.w
 // Export agent:
 final exportersProvider = Provider<List<Exporter>>(buildExporters);
 // Platform agent:
-final incomingFileServiceProvider =
-    Provider<IncomingFileService>((ref) => throw UnimplementedError('Platform agent'));
-final shareServiceProvider = Provider<ShareService>((ref) => throw UnimplementedError('Platform agent'));
-final filePickServiceProvider =
-    Provider<FilePickService>((ref) => throw UnimplementedError('Platform agent'));
+final incomingFileServiceProvider = Provider<IncomingFileService>((ref) {
+  final s = ChannelIncomingFileService(inboxPath: ref.watch(appDirsProvider).inbox.path);
+  ref.onDispose(s.dispose);
+  return s;
+});
+final shareServiceProvider = Provider<ShareService>((ref) => SharePlusShareService());
+final filePickServiceProvider = Provider<FilePickService>(
+    (ref) => PluginFilePickService(inboxPath: ref.watch(appDirsProvider).inbox.path));
 
 // ---- Settings -------------------------------------------------------------
 class SettingsNotifier extends AsyncNotifier<AppSettings> {

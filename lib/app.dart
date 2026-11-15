@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'app_router.dart';
 import 'core/models/app_settings.dart';
 import 'core/providers.dart';
+import 'platform/incoming_router.dart';
 import 'ui/design_system/app_theme.dart';
 
 class PdfReaderApp extends ConsumerStatefulWidget {
@@ -34,6 +35,8 @@ class _PdfReaderAppState extends ConsumerState<PdfReaderApp> {
         AppThemeMode.dark => ThemeMode.dark,
       },
       routerConfig: _router,
+      builder: (context, child) =>
+          IncomingFileListener(router: _router, child: child ?? const SizedBox.shrink()),
     );
   }
 }
