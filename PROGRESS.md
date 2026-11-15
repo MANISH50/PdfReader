@@ -15,7 +15,7 @@ Feature work is on per-agent branches; paused agents keep their work and resume 
 | Viewer | Fixing review findings (running) |
 | Editing | Building (running) |
 | Export | Review done → fixes ~half done (paused, next) |
-| QA | Review done → small fixes (paused; lead finishes them) |
+| QA | **Merged** (corpus, engine robustness tests, helpers, integration tests, CI). Follow-ups: fake DocumentService limits, split active content out of text_multi.pdf |
 | Platform | Android build step (paused, after Export) |
 | UI | Nearly done (paused, after Platform) |
 | Security | Pre-scan for decompression bombs in progress (paused, last) |
