@@ -2,32 +2,58 @@ import 'package:material_ui/material_ui.dart';
 
 /// Design tokens. Use these instead of literal numbers/colours in widgets.
 abstract final class Space {
-  static const double xs = 4, sm = 8, md = 16, lg = 24, xl = 32, xxl = 48;
+  static const double xxs = 2, xs = 4, sm = 8, md = 16, lg = 24, xl = 32, xxl = 48, xxxl = 64;
 }
 
 abstract final class Radii {
-  static const double sm = 8, md = 14, lg = 22;
+  static const double xs = 4, sm = 8, md = 14, lg = 22, xl = 28;
   static const BorderRadius card = BorderRadius.all(Radius.circular(md));
+  static const BorderRadius tile = BorderRadius.all(Radius.circular(sm + 2));
+  static const BorderRadius sheet = BorderRadius.vertical(top: Radius.circular(xl));
+  static const BorderRadius pill = BorderRadius.all(Radius.circular(999));
 }
 
 abstract final class Motion {
   static const Duration fast = Duration(milliseconds: 150);
   static const Duration normal = Duration(milliseconds: 250);
   static const Duration slow = Duration(milliseconds: 400);
+
+  /// Delay between consecutive items of a staggered entrance.
+  static const Duration stagger = Duration(milliseconds: 35);
   static const Curve standard = Curves.easeOutCubic;
   static const Curve emphasized = Curves.easeInOutCubicEmphasized;
 
   /// Respect the OS "reduce motion" setting.
   static Duration of(BuildContext context, Duration d) =>
       MediaQuery.maybeDisableAnimationsOf(context) ?? false ? Duration.zero : d;
+
+  /// True when the OS asks for reduced motion.
+  static bool reduced(BuildContext context) => MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 }
 
 /// Minimum touch target (Material 48dp; iOS HIG 44pt — we use the larger).
 const double kMinTouchTarget = 48;
 
+/// Max width of readable content columns (settings, onboarding text) on large screens.
+const double kMaxContentWidth = 720;
+
 abstract final class Brand {
-  /// Deep indigo-teal accent; checked for >= 4.5:1 contrast on white and on #121212.
+  /// Deep indigo accent. Contrast vs white is 5.7:1 (AA for text); on dark
+  /// surfaces the generated tonal palette supplies lighter primaries instead.
   static const Color seed = Color(0xFF3B5BDB);
+
+  /// Darker end of the icon/illustration gradient.
+  static const Color seedDeep = Color(0xFF2A3FA6);
+
+  /// Warm accent used for the lens mark in the logo and illustrations.
+  static const Color accent = Color(0xFFFFB547);
+
+  /// Paper white used for the document sheet in the logo.
+  static const Color paper = Color(0xFFFFFFFF);
+
+  /// Splash backgrounds (keep in sync with pubspec flutter_native_splash).
+  static const Color splashLight = Color(0xFFF6F7FB);
+  static const Color splashDark = Color(0xFF0F1115);
 }
 
 /// Breakpoints for adaptive layouts.
@@ -38,4 +64,13 @@ WindowSize windowSizeOf(BuildContext context) {
   if (w < 600) return WindowSize.compact;
   if (w < 840) return WindowSize.medium;
   return WindowSize.expanded;
+}
+
+/// Horizontal page padding that centres content in a [maxWidth] column on
+/// wide windows while keeping a comfortable gutter on phones.
+double contentGutter(BuildContext context, {double maxWidth = kMaxContentWidth}) {
+  final w = MediaQuery.sizeOf(context).width;
+  final base = windowSizeOf(context) == WindowSize.compact ? Space.md : Space.lg;
+  final centred = (w - maxWidth) / 2;
+  return centred > base ? centred : base;
 }
