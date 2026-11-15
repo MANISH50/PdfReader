@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.50.0
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Unit, widget and corpus tests
+        # test/qa/corpus_open_test.dart runs every committed corpus PDF through
+        # PDFium (downloaded by pdfium_dart's build hook, SHA-256 pinned).
+        run: flutter test --reporter expanded
+
+      - name: Manifest permission check
+        run: |
+          if [ -x tool/security/check_manifest.sh ]; then
+            tool/security/check_manifest.sh
+          elif [ -f tool/security/check_manifest.sh ]; then
+            bash tool/security/check_manifest.sh
+          else
+            echo "tool/security/check_manifest.sh not present; skipping"
+          fi
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload corpus results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: corpus-results
+          path: |
+            build/qa/
+          if-no-files-found: ignore
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+
+  corpus-regeneration:
+    # Checks the corpus generator still runs (fonts pinned; encrypted files use random salts, so bytes differ) from the generator, and runs
+    # the engine tests against a freshly generated corpus incl. huge.pdf.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.50.0
+          cache: true
+
+      - name: Generate corpus (with --huge)
+        run: |
+          pip install -r tool/testdata/requirements.txt
+          python tool/testdata/make_corpus.py --out build/corpus --clean --huge
+
+      - name: Engine robustness tests on generated corpus
+        env:
+          QA_CORPUS_DIR: build/corpus
+        run: |
+          flutter pub get
+          flutter test test/qa/corpus_open_test.dart --reporter expanded
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: corpus-regenerated-results
+          path: build/qa/
+          if-no-files-found: ignore
