@@ -6,8 +6,25 @@ _Lead updates this file after every merge._
 - **Step 1 — Research**: `RESEARCH.md` (survey, premium-reading notes, stack + license table, security, feature list). Approved.
 - **Step 2 — Skeleton**: Flutter 3.50 project (Android, iOS, macOS, Windows, Linux), pinned deps, strict lints, shared interfaces in `lib/core/`, design system in `lib/ui/design_system/`, router, settings, private storage, undo stack, link policy, security limits, core unit tests.
 
-## In progress
-- Step 3 — Parallel feature agents (Viewer, Editing, Export, Platform, UI, Security, QA, Docs).
+## In progress (lean mode: at most 2 agents at a time, to save usage)
+Feature work is on per-agent branches; paused agents keep their work and resume later.
+
+| Part | Status |
+|---|---|
+| Docs | Merged (final facts filled in at release) |
+| Viewer | **Merged** after review fixes; editing tools wired in (Edit button, annotation overlay, Fill form, Save copy with annotations) |
+| Editing | **Merged** (annotations + undo, signatures, organizer, merge/split, flatten to real PDF content, form filling, safe save). Gaps: edited copies of encrypted PDFs saved unencrypted; merge/split drop form fields & bookmarks |
+| Export | Review done → fixing (running) |
+| QA | **Merged** (corpus, engine robustness tests, helpers, integration tests, CI). Follow-ups: fake DocumentService limits, split active content out of text_multi.pdf |
+| Platform | Resumed (running) |
+| UI | Nearly done (paused, after Platform) |
+| Security | Pre-scan for decompression bombs in progress (paused, last) |
+
+### Lean process
+1. Max 2 agents at once; resume paused agents in the order above as slots free up.
+2. Lead reviews and merges each branch directly (no separate reviewer agent per part).
+3. Lead does small fixes and integration (wiring, keys, conflicts) itself.
+4. One independent security review agent at the end, plus CI on GitHub Actions for emulator/iOS tests.
 
 ## Next
 - Step 4 — Full test run, CI emulator + iOS workflows, security review with malformed PDFs, performance checks, screenshots.
