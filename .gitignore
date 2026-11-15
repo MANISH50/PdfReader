@@ -60,3 +60,6 @@ key.properties
 
 # Agent worktrees (local only)
 /.claude/
+
+# Kotlin compiler session files
+/android/.kotlin/
