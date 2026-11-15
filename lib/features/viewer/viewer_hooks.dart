@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../core/models/document_ref.dart';
+import '../editor/viewer_integration.dart';
 
 /// Extension points of the viewer. See the comment at the top of
 /// `viewer_screen.dart` for how the Editing agent plugs in.
@@ -126,7 +127,7 @@ class ViewerExtensions {
 
 /// Override this (ProviderScope override or by changing this single line) to
 /// plug the editor into the viewer.
-final viewerExtensionsProvider = Provider<ViewerExtensions>((ref) => const ViewerExtensions());
+final viewerExtensionsProvider = Provider<ViewerExtensions>(editorViewerExtensions);
 
 /// Opens external URLs after the user confirmed them. Seam for tests.
 typedef UrlOpener = Future<bool> Function(Uri uri);

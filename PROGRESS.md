@@ -12,11 +12,11 @@ Feature work is on per-agent branches; paused agents keep their work and resume 
 | Part | Status |
 |---|---|
 | Docs | Merged (final facts filled in at release) |
-| Viewer | Fixing review findings (running) |
+| Viewer | **Merged** after review fixes; editing tools wired in (Edit button, annotation overlay, Fill form, Save copy with annotations) |
 | Editing | **Merged** (annotations + undo, signatures, organizer, merge/split, flatten to real PDF content, form filling, safe save). Gaps: edited copies of encrypted PDFs saved unencrypted; merge/split drop form fields & bookmarks |
 | Export | Review done → fixing (running) |
 | QA | **Merged** (corpus, engine robustness tests, helpers, integration tests, CI). Follow-ups: fake DocumentService limits, split active content out of text_multi.pdf |
-| Platform | Android build step (paused, after Export) |
+| Platform | Resumed (running) |
 | UI | Nearly done (paused, after Platform) |
 | Security | Pre-scan for decompression bombs in progress (paused, last) |
 
