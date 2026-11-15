@@ -17,7 +17,7 @@ Feature work is on per-agent branches; paused agents keep their work and resume 
 | Export | **Merged** after review fixes (PNG/JPG, TXT, DOCX, PDF with edits; streamed zips; PDFium work on pdfrx worker) |
 | QA | **Merged** (corpus, engine robustness tests, helpers, integration tests, CI). Follow-ups: fake DocumentService limits, split active content out of text_multi.pdf |
 | Platform | Resumed (running) |
-| UI | Resumed (running) |
+| UI | **Merged** (design system, home, onboarding, settings, icon & splash, accessibility tests). TODO: multi-file merge from Home, real thumbnails |
 | Security | Pre-scan for decompression bombs in progress (paused, last) |
 
 ### Lean process

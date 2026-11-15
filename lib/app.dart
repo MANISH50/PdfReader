@@ -26,6 +26,8 @@ class _PdfReaderAppState extends ConsumerState<PdfReaderApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
+      highContrastTheme: AppTheme.light(highContrast: true),
+      highContrastDarkTheme: AppTheme.dark(highContrast: true),
       themeMode: switch (settings.themeMode) {
         AppThemeMode.system => ThemeMode.system,
         AppThemeMode.light => ThemeMode.light,
