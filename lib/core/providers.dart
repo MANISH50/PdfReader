@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../platform/file_pick_service_impl.dart';
+import '../platform/incoming_file_service_impl.dart';
 import '../platform/platform_services.dart';
+import '../platform/share_service_impl.dart';
 import 'export/exporter.dart';
 import 'models/app_settings.dart';
 import 'pdf/document_service.dart';
@@ -28,11 +31,14 @@ final saveServiceProvider = Provider<SaveService>((ref) => throw UnimplementedEr
 // Export agent:
 final exportersProvider = Provider<List<Exporter>>((ref) => const []);
 // Platform agent:
-final incomingFileServiceProvider =
-    Provider<IncomingFileService>((ref) => throw UnimplementedError('Platform agent'));
-final shareServiceProvider = Provider<ShareService>((ref) => throw UnimplementedError('Platform agent'));
-final filePickServiceProvider =
-    Provider<FilePickService>((ref) => throw UnimplementedError('Platform agent'));
+final incomingFileServiceProvider = Provider<IncomingFileService>((ref) {
+  final s = ChannelIncomingFileService(inboxPath: ref.watch(appDirsProvider).inbox.path);
+  ref.onDispose(s.dispose);
+  return s;
+});
+final shareServiceProvider = Provider<ShareService>((ref) => SharePlusShareService());
+final filePickServiceProvider = Provider<FilePickService>(
+    (ref) => PluginFilePickService(inboxPath: ref.watch(appDirsProvider).inbox.path));
 
 // ---- Settings -------------------------------------------------------------
 class SettingsNotifier extends AsyncNotifier<AppSettings> {
