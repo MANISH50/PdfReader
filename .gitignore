@@ -57,3 +57,6 @@ key.properties
 
 # Split debug info from --obfuscate builds
 /build/symbols/
+
+# Agent worktrees (local only)
+/.claude/

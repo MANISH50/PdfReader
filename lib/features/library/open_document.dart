@@ -1,0 +1,59 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
+
+import '../../app_router.dart';
+import '../../core/models/document_ref.dart';
+import '../../core/pdf/document_service.dart';
+import '../../core/providers.dart';
+import '../../ui/design_system/adaptive.dart';
+import 'recents_controller.dart';
+
+/// User-facing message for an open/import failure (never raw exception text).
+String friendlyOpenError(Object error) {
+  if (error is DocumentOpenException) {
+    return switch (error.failure) {
+      OpenFailure.notFound => 'That file is no longer available.',
+      OpenFailure.tooLarge => 'That file is too large to open safely.',
+      OpenFailure.tooManyPages => 'That document has too many pages to open safely.',
+      OpenFailure.notPdf => "That file isn't a PDF.",
+      OpenFailure.corrupted => 'That PDF looks damaged and couldn’t be opened.',
+      OpenFailure.wrongPassword => 'Wrong password.',
+      OpenFailure.cancelled => 'Cancelled.',
+      OpenFailure.timeout => 'Opening took too long. Please try again.',
+    };
+  }
+  return 'Couldn’t open that file. Please try again.';
+}
+
+/// Picks one or more PDFs with the system picker and imports them.
+/// Returns an empty list if the user cancelled; shows a snackbar and
+/// returns null on failure.
+Future<List<DocumentRef>?> pickAndImport(
+  BuildContext context,
+  WidgetRef ref, {
+  bool multiple = false,
+}) async {
+  try {
+    final paths = await ref.read(filePickServiceProvider).pickPdfs(multiple: multiple);
+    if (paths.isEmpty) return const [];
+    final service = ref.read(documentServiceProvider);
+    return [for (final p in paths) await service.importFile(p)];
+  } catch (e) {
+    if (e is DocumentOpenException && e.failure == OpenFailure.cancelled) return const [];
+    if (context.mounted) showAppSnackBar(context, friendlyOpenError(e));
+    return null;
+  }
+}
+
+/// Opens [doc] in the viewer, recording it in recents first.
+Future<void> openInViewer(BuildContext context, WidgetRef ref, DocumentRef doc) async {
+  try {
+    await ref.read(recentsProvider.notifier).touch(doc);
+  } catch (_) {
+    // Recents are a convenience; never block opening on them.
+  }
+  if (!context.mounted) return;
+  await context.push(Routes.viewer, extra: doc);
+  ref.invalidate(recentsProvider); // reading position may have changed
+}

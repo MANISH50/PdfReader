@@ -1,0 +1,68 @@
+name: iOS
+
+on:
+  workflow_dispatch:
+  # schedule re-enabled after integration
+  # schedule:
+  #   - cron: '41 4 * * 1' # weekly, Monday 04:41 UTC
+  # PR trigger re-enabled once feature screens carry the QA keys.
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.50.0
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Build iOS (debug, no codesign)
+        run: flutter build ios --no-codesign --debug
+
+      - name: Boot an iPhone simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          ios = sorted((k for k in d if "iOS" in k), key=lambda k: [int(x) for x in k.split("iOS-")[-1].split("-")])
+          for rt in reversed(ios):
+              for dev in d[rt]:
+                  if dev["name"].startswith("iPhone"):
+                      print(dev["udid"]); sys.exit(0)
+          sys.exit("no iPhone simulator available")')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Integration tests on simulator
+        run: flutter test integration_test/app_flow_test.dart -d ${{ steps.sim.outputs.udid }} --reporter expanded
+
+      - name: Performance + screenshots on simulator (debug numbers, informational)
+        run: |
+          mkdir -p build/screenshots
+          flutter drive -d ${{ steps.sim.outputs.udid }} \
+            --driver=integration_test/driver/perf_driver.dart \
+            --target=integration_test/performance_test.dart \
+            --dart-define=QA_SCREENSHOTS=true
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ios-simulator-results
+          path: |
+            build/perf_summary.txt
+            build/integration_response_data.json
+            build/screenshots/
+          if-no-files-found: warn

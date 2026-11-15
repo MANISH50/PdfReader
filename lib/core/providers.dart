@@ -1,10 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/editor/engine/pdfrx_page_editor.dart';
+import '../features/editor/save/file_save_service.dart';
+import '../features/editor/signature/signature_store.dart';
+import '../platform/file_pick_service_impl.dart';
+import '../platform/incoming_file_service_impl.dart';
 import '../platform/platform_services.dart';
+import '../features/export/exporters.dart';
+import '../platform/share_service_impl.dart';
 import 'export/exporter.dart';
 import 'models/app_settings.dart';
 import 'pdf/document_service.dart';
 import 'pdf/page_editor.dart';
+import 'pdf/pdfrx_document_service.dart';
 import 'storage/app_storage.dart';
 import 'storage/stores.dart';
 
@@ -20,19 +28,22 @@ final annotationStoreProvider =
 
 // ---- Implementations supplied by feature agents (one line each) ----------
 // Viewer agent:
-final documentServiceProvider =
-    Provider<DocumentService>((ref) => throw UnimplementedError('Viewer agent'));
+final documentServiceProvider = Provider<DocumentService>((ref) => PdfrxDocumentService());
 // Editing agent:
-final pageEditorProvider = Provider<PageEditor>((ref) => throw UnimplementedError('Editing agent'));
-final saveServiceProvider = Provider<SaveService>((ref) => throw UnimplementedError('Editing agent'));
+final pageEditorProvider = Provider<PageEditor>((ref) =>
+    PdfrxPageEditor(loadSignature: SignatureStore(ref.watch(appDirsProvider).signatures).load));
+final saveServiceProvider = Provider<SaveService>((ref) => FileSaveService(ref.watch(appDirsProvider)));
 // Export agent:
-final exportersProvider = Provider<List<Exporter>>((ref) => const []);
+final exportersProvider = Provider<List<Exporter>>(buildExporters);
 // Platform agent:
-final incomingFileServiceProvider =
-    Provider<IncomingFileService>((ref) => throw UnimplementedError('Platform agent'));
-final shareServiceProvider = Provider<ShareService>((ref) => throw UnimplementedError('Platform agent'));
-final filePickServiceProvider =
-    Provider<FilePickService>((ref) => throw UnimplementedError('Platform agent'));
+final incomingFileServiceProvider = Provider<IncomingFileService>((ref) {
+  final s = ChannelIncomingFileService(inboxPath: ref.watch(appDirsProvider).inbox.path);
+  ref.onDispose(s.dispose);
+  return s;
+});
+final shareServiceProvider = Provider<ShareService>((ref) => SharePlusShareService());
+final filePickServiceProvider = Provider<FilePickService>(
+    (ref) => PluginFilePickService(inboxPath: ref.watch(appDirsProvider).inbox.path));
 
 // ---- Settings -------------------------------------------------------------
 class SettingsNotifier extends AsyncNotifier<AppSettings> {
