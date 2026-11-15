@@ -14,10 +14,10 @@ Feature work is on per-agent branches; paused agents keep their work and resume 
 | Docs | Merged (final facts filled in at release) |
 | Viewer | **Merged** after review fixes; editing tools wired in (Edit button, annotation overlay, Fill form, Save copy with annotations) |
 | Editing | **Merged** (annotations + undo, signatures, organizer, merge/split, flatten to real PDF content, form filling, safe save). Gaps: edited copies of encrypted PDFs saved unencrypted; merge/split drop form fields & bookmarks |
-| Export | Review done → fixing (running) |
+| Export | **Merged** after review fixes (PNG/JPG, TXT, DOCX, PDF with edits; streamed zips; PDFium work on pdfrx worker) |
 | QA | **Merged** (corpus, engine robustness tests, helpers, integration tests, CI). Follow-ups: fake DocumentService limits, split active content out of text_multi.pdf |
 | Platform | Resumed (running) |
-| UI | Nearly done (paused, after Platform) |
+| UI | Resumed (running) |
 | Security | Pre-scan for decompression bombs in progress (paused, last) |
 
 ### Lean process

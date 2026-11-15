@@ -4,6 +4,7 @@ import '../features/editor/engine/pdfrx_page_editor.dart';
 import '../features/editor/save/file_save_service.dart';
 import '../features/editor/signature/signature_store.dart';
 import '../platform/platform_services.dart';
+import '../features/export/exporters.dart';
 import 'export/exporter.dart';
 import 'models/app_settings.dart';
 import 'pdf/document_service.dart';
@@ -30,7 +31,7 @@ final pageEditorProvider = Provider<PageEditor>((ref) =>
     PdfrxPageEditor(loadSignature: SignatureStore(ref.watch(appDirsProvider).signatures).load));
 final saveServiceProvider = Provider<SaveService>((ref) => FileSaveService(ref.watch(appDirsProvider)));
 // Export agent:
-final exportersProvider = Provider<List<Exporter>>((ref) => const []);
+final exportersProvider = Provider<List<Exporter>>(buildExporters);
 // Platform agent:
 final incomingFileServiceProvider =
     Provider<IncomingFileService>((ref) => throw UnimplementedError('Platform agent'));
