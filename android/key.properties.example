@@ -1,0 +1,17 @@
+# Copy to android/key.properties (gitignored) for local release signing.
+# NEVER commit key.properties or the keystore.
+#
+# Create a keystore (once):
+#   keytool -genkeypair -v -keystore ~/keys/pdfreader-upload.jks -storetype PKCS12 \
+#     -keyalg RSA -keysize 4096 -validity 10000 -alias pdfreader
+#
+# CI uses environment variables instead (they take precedence over this file):
+#   PDFREADER_KEYSTORE_PATH, PDFREADER_KEYSTORE_PASSWORD,
+#   PDFREADER_KEY_ALIAS, PDFREADER_KEY_PASSWORD
+#   PDFREADER_REQUIRE_RELEASE_SIGNING=true   (fail instead of falling back to the debug key)
+
+# Absolute path, or relative to android/app/
+storeFile=/home/you/keys/pdfreader-upload.jks
+storePassword=change-me
+keyAlias=pdfreader
+keyPassword=change-me

@@ -6,7 +6,7 @@ abstract final class SecurityLimits {
   /// Refuse documents with more pages than this.
   static const int maxPages = 20000;
 
-  /// Max rendered bitmap size for one page/tile, in pixels (≈ 64 MB RGBA).
+  /// Max rendered bitmap size for one page/tile, in pixels (~ 64 MB RGBA).
   static const int maxRenderPixels = 16 * 1024 * 1024;
 
   /// Max PDF page dimension we will honour, in points (PDF spec limit is 14400).

@@ -46,3 +46,14 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Signing material (never commit)
+key.properties
+**/key.properties
+*.jks
+*.keystore
+*.p12
+*.pk8
+
+# Split debug info from --obfuscate builds
+/build/symbols/

@@ -6,7 +6,13 @@ import '../models/document_ref.dart';
 typedef PasswordRequest = Future<String?> Function({required bool retry});
 
 /// Failure categories shown to the user (never raw exception text).
-enum OpenFailure { notFound, tooLarge, tooManyPages, notPdf, corrupted, wrongPassword, cancelled, timeout }
+enum OpenFailure {
+  notFound, tooLarge, tooManyPages, notPdf, corrupted, wrongPassword, cancelled, timeout,
+
+  /// Pre-scan found a decompression bomb or similar: "This file looks unsafe
+  /// or too complex to open" (see core/security/pdf_prescan.dart).
+  unsafe,
+}
 
 class DocumentOpenException implements Exception {
   const DocumentOpenException(this.failure, [this.detail]);
