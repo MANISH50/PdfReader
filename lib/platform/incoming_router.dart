@@ -130,6 +130,7 @@ class _IncomingFileListenerState extends ConsumerState<IncomingFileListener> {
       OpenFailure.wrongPassword => 'Wrong password for $name.',
       OpenFailure.cancelled => 'Opening $name was cancelled.',
       OpenFailure.timeout => 'Opening $name took too long.',
+      OpenFailure.unsafe => '$name looks unsafe or too complex to open.',
     };
   }
 

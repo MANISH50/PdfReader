@@ -1,0 +1,62 @@
+name: security
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1" # weekly: catch newly published advisories
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.50.0
+          cache: true
+      # pub outdated + OSV (api.osv.dev, falling back to the OSV Pub dump)
+      # + license check + privacy invariants test.
+      - name: Dependency audit
+        run: bash tool/security/audit.sh
+        env:
+          CI: "true"
+      - name: Security unit tests
+        run: flutter test test/security
+
+  release-manifest:
+    # Builds a release APK (debug-signed fallback, never distributed) and fails
+    # if it requests INTERNET/storage permissions or is debuggable.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.50.0
+          cache: true
+      - name: Build release APK
+        run: flutter build apk --release --target-platform android-arm64 --obfuscate --split-debug-info=build/symbols
+      - name: Check manifest
+        run: bash tool/security/check_manifest.sh build/app/outputs/flutter-apk/app-release.apk

@@ -9,6 +9,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../models/document_ref.dart';
 import '../security/limits.dart';
+import '../security/pdf_prescan.dart';
 import 'document_service.dart';
 
 /// Opens a PDF file with the engine. Seam for tests; the default uses
@@ -43,9 +44,15 @@ class PdfrxDocumentService implements DocumentService {
     this.maxFileBytes = SecurityLimits.maxFileBytes,
     this.maxPages = SecurityLimits.maxPages,
     this.maxPasswordAttempts = 5,
-  }) : _opener = opener ?? _defaultOpener;
+    Future<PdfPrescanResult> Function(String path)? prescan,
+  })  : _opener = opener ?? _defaultOpener,
+        _prescan = prescan ?? prescanPdf;
 
   final PdfFileOpener _opener;
+
+  /// Decompression-bomb pre-scan run (in a background isolate) before PDFium
+  /// sees the file. See core/security/pdf_prescan.dart.
+  final Future<PdfPrescanResult> Function(String path) _prescan;
   final Duration openTimeout;
   final int maxFileBytes;
   final int maxPages;
@@ -114,6 +121,9 @@ class PdfrxDocumentService implements DocumentService {
     } on FileSystemException {
       throw const DocumentOpenException(OpenFailure.notFound);
     }
+
+    // PDFium has no allocation limit; refuse decompression bombs up front.
+    (await _prescan(ref.path)).throwIfUnsafe();
 
     final attempt = _OpenAttempt(openTimeout);
     var asked = 0;

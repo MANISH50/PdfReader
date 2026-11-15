@@ -231,4 +231,10 @@ Future<bool> confirmExternalLink(BuildContext context, Uri uri) async {
           icon: Icons.hourglass_disabled_outlined,
           canRetry: true,
         ),
+      OpenFailure.unsafe => (
+          title: 'Can\'t open safely',
+          message: 'This file looks unsafe or too complex to open.',
+          icon: Icons.gpp_bad_outlined,
+          canRetry: false,
+        ),
     };

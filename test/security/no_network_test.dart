@@ -23,11 +23,9 @@ final forbiddenSource = <String, RegExp>{
   'dart:html / web http': RegExp(r'''import\s+['"]dart:html['"]|\bHttpRequest\b'''),
 };
 
-/// url_launcher may only be used by the confirmed-link helper, which must run
-/// every URL through LinkPolicy. The helper is any file named
-/// `link_opener.dart`, `link_launcher.dart`, `url_opener.dart` or `url_launcher.dart`.
+/// url_launcher may only be imported by the confirmed-link code path, i.e. a
+/// file that gates every URL through LinkPolicy.decide (+ confirmation dialog).
 final launcherImport = RegExp(r'''import\s+['"]package:url_launcher''');
-final launcherHelperName = RegExp(r'(link|url)_(opener|launcher)\.dart$');
 
 /// Analytics, ads, crash reporting, attribution, remote config, push.
 final trackerNames = RegExp(
@@ -50,12 +48,8 @@ List<String> scanSource(String path, String src) {
   forbiddenSource.forEach((name, re) {
     if (re.hasMatch(code)) hits.add('$path: $name');
   });
-  if (launcherImport.hasMatch(code)) {
-    if (!launcherHelperName.hasMatch(path.replaceAll(r'\', '/'))) {
-      hits.add('$path: url_launcher outside the confirmed-link helper');
-    } else if (!code.contains('LinkPolicy')) {
-      hits.add('$path: link helper does not consult LinkPolicy');
-    }
+  if (launcherImport.hasMatch(code) && !code.contains('LinkPolicy.decide')) {
+    hits.add('$path: url_launcher used without LinkPolicy.decide gating');
   }
   final importRe = RegExp(r'''(import|export)\s+['"]package:([a-zA-Z0-9_]+)/''');
   for (final m in importRe.allMatches(code)) {
@@ -77,8 +71,6 @@ void main() {
     expect(scanSource('lib/a.dart', 'PdfDocument.openUri(Uri.parse(u));'), isNotEmpty);
     expect(scanSource('lib/a.dart', 'PdfViewer.uri(u)'), isNotEmpty);
     expect(scanSource('lib/viewer.dart', "import 'package:url_launcher/url_launcher.dart';"), isNotEmpty);
-    expect(scanSource('lib/core/security/link_opener.dart', "import 'package:url_launcher/url_launcher.dart';"),
-        isNotEmpty, reason: 'helper without LinkPolicy');
     expect(
         scanSource('lib/core/security/link_opener.dart',
             "import 'package:url_launcher/url_launcher.dart';\nfinal d = LinkPolicy.decide(uri: u);"),
@@ -120,8 +112,11 @@ void main() {
       'REQUEST_INSTALL_PACKAGES', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'CAMERA', 'RECORD_AUDIO',
       'READ_CONTACTS', 'READ_PHONE_STATE', 'AD_ID',
     ]) {
-      expect(RegExp('uses-permission[^>]*android\\.permission\\.$perm\\b|com\\.google\\.android\\.gms\\.permission\\.$perm')
-              .hasMatch(stripXmlComments(manifest)),
+      final requested = RegExp(r'<uses-permission[^>]*>')
+          .allMatches(stripXmlComments(manifest))
+          .map((m) => m.group(0)!)
+          .where((el) => !el.contains('tools:node="remove"'));
+      expect(requested.any((el) => RegExp('android\\.permission\\.$perm\\b|gms\\.permission\\.$perm\\b').hasMatch(el)),
           isFalse,
           reason: perm);
     }

@@ -51,8 +51,7 @@ if (!hasReleaseSigning && requireReleaseSigning) {
 android {
     // Kotlin/Java package of MainActivity; independent of the store identity below.
     namespace = "com.pdfreader.pdfreader"
-    // 37: receive_sharing_intent 1.9.0 compiles against API 37.
-    compileSdk = 37
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -96,7 +95,7 @@ android {
             signingConfig = if (hasReleaseSigning) {
                 signingConfigs.getByName("release")
             } else {
-                logger.warn(
+                logger.error( // error level so it shows even in Flutter's quiet Gradle output
                     "\n" +
                         "=====================================================================\n" +
                         "  WARNING: no release keystore configured (android/key.properties or\n" +

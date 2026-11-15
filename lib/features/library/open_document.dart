@@ -21,6 +21,7 @@ String friendlyOpenError(Object error) {
       OpenFailure.wrongPassword => 'Wrong password.',
       OpenFailure.cancelled => 'Cancelled.',
       OpenFailure.timeout => 'Opening took too long. Please try again.',
+      OpenFailure.unsafe => 'This file looks unsafe or too complex to open.',
     };
   }
   return 'Couldn’t open that file. Please try again.';
