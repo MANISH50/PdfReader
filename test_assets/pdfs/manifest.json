@@ -1,0 +1,3241 @@
+{
+  "version": 1,
+  "generator": "tool/testdata/make_corpus.py",
+  "seed": 20261115,
+  "fonts": [
+    "NotoSansArabic (SIL OFL 1.1, google/fonts)",
+    "NotoSansDevanagari (SIL OFL 1.1, google/fonts)",
+    "NotoSansHebrew (SIL OFL 1.1, google/fonts)"
+  ],
+  "expectLegend": {
+    "opens": "Must open, report the page count, render page 1 and load text.",
+    "needs_password": "Must ask for a password; opens with 'password'; wrong password -> failure.",
+    "fails": "Must fail gracefully with DocumentOpenException(failure) - never hang or crash.",
+    "fails_or_opens": "Either opens (possibly with recovered pages) or fails with DocumentOpenException - never hangs or crashes."
+  },
+  "files": [
+    {
+      "path": "tiny.pdf",
+      "category": "valid",
+      "expect": "opens",
+      "description": "One A4 page with two lines of Helvetica text.",
+      "pages": 1,
+      "text": [
+        "Hello PdfReader"
+      ],
+      "bytes": 1592,
+      "sha256": "43b54ba275074fdbef8db63b9aab42d25844a52c3a916ae88dfebb21b711900b",
+      "commit": true
+    },
+    {
+      "path": "text_multi.pdf",
+      "category": "valid",
+      "expect": "opens",
+      "description": "20 A4 pages: headings, paragraphs, outline (19 chapters x 3 sections), internal links (TOC on page 1 + 'next chapter'), external https link, javascript: URI link, Launch action, OpenAction + Names JavaScript, one embedded file attachment.",
+      "pages": 20,
+      "text": [
+        "Contents",
+        "Chapter 1"
+      ],
+      "features": {
+        "search": {
+          "term": "needle",
+          "pages": [
+            3,
+            11,
+            18
+          ]
+        },
+        "outlineTopLevel": 20,
+        "externalLink": "https://example.com/pdfreader",
+        "blockedLinks": [
+          "javascript:alert('pwned')",
+          "Launch"
+        ],
+        "javascript": true,
+        "attachments": [
+          "attachment.txt"
+        ]
+      },
+      "bytes": 52196,
+      "sha256": "a1f8c5bb15ab994b9ff23b380429739afd19c568a6c613fef5e5590725c0c4e4",
+      "commit": true
+    },
+    {
+      "path": "scanned.pdf",
+      "category": "valid",
+      "expect": "opens",
+      "description": "3 image-only pages (JPEG 'scan', no text layer). Text extraction is empty; search must report 'no text layer' instead of failing.",
+      "pages": 3,
+      "features": {
+        "textLayer": false
+      },
+      "bytes": 230702,
+      "sha256": "7fcb9b27b625fa96ed5fe5e48b4e18b20907435f00dd8933b17d3f44c4e6970b",
+      "commit": true
+    },
+    {
+      "path": "password.pdf",
+      "category": "protected",
+      "expect": "needs_password",
+      "description": "tiny.pdf encrypted with AES-256 (R=6), user password 'test123'. Wrong password must give wrongPassword; cancel must give cancelled.",
+      "failure": "wrongPassword",
+      "password": "test123",
+      "pages": 1,
+      "text": [
+        "Hello PdfReader"
+      ],
+      "features": {
+        "encryption": "AES-256"
+      },
+      "bytes": 2658,
+      "sha256": "dfdafb47b5ea297ff2f9658445438f904e04a95700083573cc0dd88fafee95cd",
+      "commit": true
+    },
+    {
+      "path": "owner-only-protected.pdf",
+      "category": "protected",
+      "expect": "opens",
+      "description": "AES-256 with empty user password and an owner password; permissions deny print/copy/modify. Must open without a prompt; the app should show restrictions.",
+      "pages": 1,
+      "text": [
+        "Hello PdfReader"
+      ],
+      "features": {
+        "encryption": "AES-256",
+        "restricted": true
+      },
+      "bytes": 2658,
+      "sha256": "d76e63724b0e3bd0888f3429badd2ca9bbb268ad57361e83618834f0c1fb574b",
+      "commit": true
+    },
+    {
+      "path": "forms.pdf",
+      "category": "valid",
+      "expect": "opens",
+      "description": "AcroForm with text (single + multiline), checkbox, radio group (3), combo box and list box fields.",
+      "pages": 1,
+      "text": [
+        "Registration form"
+      ],
+      "features": {
+        "fields": {
+          "full_name": "text",
+          "notes": "text",
+          "subscribe": "checkbox",
+          "colour": "radio",
+          "country": "combo",
+          "languages": "list"
+        }
+      },
+      "bytes": 13655,
+      "sha256": "e202cd260936d71ae9f0f6af114b46420244207d66c75b38df9588ad24b1c899",
+      "commit": true
+    },
+    {
+      "path": "rtl_arabic_hebrew.pdf",
+      "category": "valid",
+      "expect": "opens",
+      "description": "One page of right-aligned Arabic and Hebrew text. Fonts: NotoSansArabic (SIL OFL 1.1, google/fonts); NotoSansHebrew (SIL OFL 1.1, google/fonts). Shaped with HarfBuzz: True.",
+      "pages": 1,
+      "text": [
+        "RTL sample"
+      ],
+      "features": {
+        "scripts": [
+          "Arab",
+          "Hebr"
+        ],
+        "codepointRanges": [
+          [
+            1536,
+            1791
+          ],
+          [
+            1424,
+            1535
+          ]
+        ],
+        "shaped": true
+      },
+      "bytes": 23619,
+      "sha256": "665eb2ca3bc3a1be7b303580f1d9827b93ecb3f43ef7f266f37f38ad4fd7d996",
+      "commit": true
+    },
+    {
+      "path": "hindi.pdf",
+      "category": "valid",
+      "expect": "opens",
+      "description": "One page of Hindi incl. conjuncts. Font: NotoSansDevanagari (SIL OFL 1.1, google/fonts). Shaped: True.",
+      "pages": 1,
+      "text": [
+        "Hindi sample"
+      ],
+      "features": {
+        "scripts": [
+          "Deva"
+        ],
+        "codepointRanges": [
+          [
+            2304,
+            2431
+          ]
+        ],
+        "shaped": true
+      },
+      "bytes": 13767,
+      "sha256": "cbea8d68fa7b5997e8f1fc6f61fecfbd62bb8d1aa76a567c4ee4cdcd54fdde4c",
+      "commit": true
+    },
+    {
+      "path": "mixed_rotation.pdf",
+      "category": "valid",
+      "expect": "opens",
+      "description": "9 pages: /Rotate 0/90/180/270, A4/Letter/A5/landscape, 612x14400 long page, 14400x300 rotated banner, 200x200 square.",
+      "pages": 9,
+      "text": [
+        "A4 portrait"
+      ],
+      "features": {
+        "rotations": [
+          0,
+          90,
+          180,
+          270,
+          0,
+          0,
+          0,
+          90,
+          0
+        ],
+        "sizesPt": [
+          [
+            595.2755905511812,
+            841.8897637795277
+          ],
+          [
+            595.2755905511812,
+            841.8897637795277
+          ],
+          [
+            612.0,
+            792.0
+          ],
+          [
+            612.0,
+            792.0
+          ],
+          [
+            841.8897637795277,
+            595.2755905511812
+          ],
+          [
+            419.52755905511816,
+            595.2755905511812
+          ],
+          [
+            612.0,
+            14400.0
+          ],
+          [
+            14400.0,
+            300.0
+          ],
+          [
+            200.0,
+            200.0
+          ]
+        ]
+      },
+      "bytes": 5613,
+      "sha256": "ef48eb010a21231c34e2a95881016f53f94eb200ee7170dd978124e7945952e4",
+      "commit": true
+    },
+    {
+      "path": "annotated.pdf",
+      "category": "valid",
+      "expect": "opens",
+      "description": "One page with an existing Highlight (with appearance stream), an Ink annotation and a Text (sticky note) annotation.",
+      "pages": 1,
+      "text": [
+        "highlighted"
+      ],
+      "features": {
+        "annotations": [
+          "Highlight",
+          "Ink",
+          "Text"
+        ]
+      },
+      "bytes": 2599,
+      "sha256": "108eb00a25f4663db95ba9614b3c9f5e1303922935522f4456d94d6ce6d4147b",
+      "commit": true
+    },
+    {
+      "path": "malformed/zero_bytes.pdf",
+      "category": "malformed",
+      "expect": "fails",
+      "description": "Empty file.",
+      "failure": "notPdf",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "commit": true
+    },
+    {
+      "path": "malformed/png_renamed.pdf",
+      "category": "malformed",
+      "expect": "fails",
+      "description": "A PNG image with a .pdf extension.",
+      "failure": "notPdf",
+      "bytes": 155,
+      "sha256": "b4fb98390ce0c3a0b5573132caf5dc3afb24dff8a09207f099125f1e2a988797",
+      "commit": true
+    },
+    {
+      "path": "malformed/zip_renamed.pdf",
+      "category": "malformed",
+      "expect": "fails",
+      "description": "A ZIP archive (containing a PDF) with a .pdf extension.",
+      "failure": "notPdf",
+      "bytes": 1084,
+      "sha256": "ad9cfa4f102d2ddea3d3f3045c80f911c6e311eaa299453725b14cb9f4440704",
+      "commit": true
+    },
+    {
+      "path": "malformed/text_renamed.pdf",
+      "category": "malformed",
+      "expect": "fails",
+      "description": "Plain text with a .pdf extension.",
+      "failure": "notPdf",
+      "bytes": 680,
+      "sha256": "c9257faf70452f55870d7a0e0dc22f6b2ee3050c4b04e717e0dac5b60c633083",
+      "commit": true
+    },
+    {
+      "path": "malformed/garbage_after_header.pdf",
+      "category": "malformed",
+      "expect": "fails",
+      "description": "Valid header followed by 16 KiB of random bytes.",
+      "failure": "corrupted",
+      "bytes": 16393,
+      "sha256": "6f409b9142a95f30912d9b8982c34abf87fea9d21b7d642b5309d0567dcf02dd",
+      "commit": true
+    },
+    {
+      "path": "malformed/truncated.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "text_multi.pdf cut at 60% (no xref/trailer). PDFium may recover some pages.",
+      "failure": "corrupted",
+      "bytes": 31317,
+      "sha256": "70b158a3975b2c61cc9c28685c059082fd9337e00efbe968ca73dccd747bd33d",
+      "commit": true
+    },
+    {
+      "path": "malformed/truncated_header_only.pdf",
+      "category": "malformed",
+      "expect": "fails",
+      "description": "First 64 bytes of tiny.pdf.",
+      "failure": "corrupted",
+      "bytes": 64,
+      "sha256": "730b494fb87894df60bff156c4f04dbb5c32614976607132c031657707695f15",
+      "commit": true
+    },
+    {
+      "path": "malformed/bad_xref_offsets.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Classic xref table whose offsets all point to wrong places.",
+      "failure": "corrupted",
+      "bytes": 1480,
+      "sha256": "9ad3a7574e0916b1c5589465ba60dffadd8df8bb7df6a9ef536f9048cc76348e",
+      "commit": true
+    },
+    {
+      "path": "malformed/bad_startxref.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "startxref points past EOF.",
+      "failure": "corrupted",
+      "bytes": 1485,
+      "sha256": "777b95d33e1b4090d37aafefe0764563f41cfd0ffa5425e47ae099fdad91a5e0",
+      "commit": true
+    },
+    {
+      "path": "malformed/missing_trailer.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Trailer, startxref and %%EOF removed.",
+      "failure": "corrupted",
+      "bytes": 1338,
+      "sha256": "21e0bc6d24d41f4608a53f0aa532ef5e7509bdad45ff2300116119e9d9f7c404",
+      "commit": true
+    },
+    {
+      "path": "malformed/missing_root.pdf",
+      "category": "malformed",
+      "expect": "fails",
+      "description": "Trailer without /Root.",
+      "failure": "corrupted",
+      "bytes": 1381,
+      "sha256": "1a4387c398e3e6dd60c79f904ebba2765afb7f02d5502506caa0eb915400971a",
+      "commit": true
+    },
+    {
+      "path": "malformed/circular_pages_tree.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Pages tree whose /Kids reference the Pages node itself and each other.",
+      "failure": "corrupted",
+      "bytes": 347,
+      "sha256": "325b32ee71ef351452e72b6b328110b0e058ded2f43d1eb561afc7b8d9d6d8f8",
+      "commit": true
+    },
+    {
+      "path": "malformed/circular_objects.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Self-referencing Annots array, Parent loop, action /Next chain loop and an outline loop.",
+      "failure": "corrupted",
+      "bytes": 1017,
+      "sha256": "13c7461e216fdfcb8fafcbd2d3f90551737d884623a6e8da6909db06e45e83c2",
+      "commit": true
+    },
+    {
+      "path": "malformed/circular_outline.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Outline whose items loop (/Next back to the first, /First to itself).",
+      "failure": "corrupted",
+      "bytes": 701,
+      "sha256": "d8d4a914757a5e5e7a78faa82c17f9120ebb9f8d04db58ede7dcfb4604994f8f",
+      "commit": true
+    },
+    {
+      "path": "malformed/deep_nesting.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Page dictionary with an array nested 100,000 levels deep plus a 2000-level dict.",
+      "failure": "corrupted",
+      "bytes": 216645,
+      "sha256": "96300014f69113e3f59d8a044b595894ffd92d2b0d60062c5114e8033dd747bf",
+      "commit": true
+    },
+    {
+      "path": "malformed/deep_nesting_content.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Content stream with 40,000 nested q/Q and 40,000 unclosed arrays.",
+      "failure": "corrupted",
+      "bytes": 240579,
+      "sha256": "eeb6e2c8e8889031f7261cc9cab5577922c550af542c1db71e0891d817fee0f1",
+      "commit": true
+    },
+    {
+      "path": "malformed/huge_page_count.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "/Count 1000000000 claimed, one real page. Must not allocate per claimed page.",
+      "failure": "corrupted",
+      "bytes": 599,
+      "sha256": "9557f203231f961d41a9688e8a1fd4e1565ccf754bc5e127b88ae50fdd5701b0",
+      "commit": true
+    },
+    {
+      "path": "malformed/negative_page_count.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "/Count -5.",
+      "failure": "corrupted",
+      "bytes": 591,
+      "sha256": "2744f988c62d3ac98fdf3d2feacc5ee270e5ea121acae24fd42402c46293f0b0",
+      "commit": true
+    },
+    {
+      "path": "malformed/huge_mediabox.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "MediaBox [0 0 1e9 1e9]. Rendering must clamp the bitmap size (SecurityLimits.maxRenderPixels).",
+      "failure": "corrupted",
+      "bytes": 604,
+      "sha256": "982a9195df9d9e9ee1f85d0797ed7bd50aa559a2a7df0fc9e31f39addba499ab",
+      "commit": true
+    },
+    {
+      "path": "malformed/inverted_mediabox.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "MediaBox with swapped corners.",
+      "failure": "corrupted",
+      "bytes": 590,
+      "sha256": "256880aa070764540d3c02f4381440a78083228f5813116ca54d78a0effa9771",
+      "commit": true
+    },
+    {
+      "path": "malformed/zero_mediabox.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Zero-area MediaBox.",
+      "failure": "corrupted",
+      "bytes": 586,
+      "sha256": "f725dff98011fab89ac0d6056f726005c29d72018b5eb7d31b07f3292dfca84c",
+      "commit": true
+    },
+    {
+      "path": "malformed/nan_mediabox.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Overflowing MediaBox numbers.",
+      "failure": "corrupted",
+      "bytes": 595,
+      "sha256": "5506667854fe0a12167cdb5b85da3cfcd43216587e0e7c6dd2a695fe5c64a4ec",
+      "commit": true
+    },
+    {
+      "path": "malformed/decompression_bomb.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Page content stream: [/FlateDecode /FlateDecode] inflating to 1 GiB of whitespace.",
+      "failure": "corrupted",
+      "features": {
+        "inflatedBytes": 1073741824
+      },
+      "bytes": 2393,
+      "sha256": "19570adca8a34edc95679d222547fbb458ec43e897cb764314553c4a97251dfd",
+      "commit": true
+    },
+    {
+      "path": "malformed/image_bomb.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Image XObject 20000x20000 RGB (1.2 GB decoded) from a tiny double-Flate stream.",
+      "failure": "corrupted",
+      "features": {
+        "inflatedBytes": 1200000000
+      },
+      "bytes": 2791,
+      "sha256": "79f76a23466a26ca563c43df367286f90fde719bb753d36096dacf329b3f6548",
+      "commit": true
+    },
+    {
+      "path": "malformed/bad_flate.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Content stream marked FlateDecode containing random bytes.",
+      "failure": "corrupted",
+      "bytes": 4670,
+      "sha256": "6bacee746ce85155b8801e9c19400066462e3f4b849d55ef0580ad35944ca7dd",
+      "commit": true
+    },
+    {
+      "path": "malformed/wrong_length.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Stream /Length far larger than the data.",
+      "failure": "corrupted",
+      "bytes": 559,
+      "sha256": "cf85efe30093b244c9ef06355516303c5c98a2bf9e5a1bded3168e629bb04107",
+      "commit": true
+    },
+    {
+      "path": "malformed/invalid_fonts.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "TrueType with garbage FontFile2, Type0 with bogus /W and CIDToGIDMap, recursive Type3 font.",
+      "failure": "corrupted",
+      "bytes": 4864,
+      "sha256": "858dc4c6cb71c8490de0afee21fe776ba85d7de8aec96b1c82a9fc93bcebb1d0",
+      "commit": true
+    },
+    {
+      "path": "malformed/broken_jpeg.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "DCTDecode image: JPEG SOI/APP0 header then garbage.",
+      "failure": "corrupted",
+      "bytes": 5787,
+      "sha256": "28ec47d29abd369063096c182cceaed7b26e35beb1dc2c2fec91e10b498dd910",
+      "commit": true
+    },
+    {
+      "path": "malformed/broken_jpx.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "JPXDecode image: JP2 signature box then garbage.",
+      "failure": "corrupted",
+      "bytes": 5788,
+      "sha256": "0132f2f48e45427671df11d08d3fcea23317d87515ef6f30568cf7d24047923b",
+      "commit": true
+    },
+    {
+      "path": "malformed/broken_jbig2.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "JBIG2Decode image with garbage data and garbage JBIG2Globals.",
+      "failure": "corrupted",
+      "bytes": 7898,
+      "sha256": "2adfdece9b18bd94527dc098afd0decccbfda4262c8e6823902dca76106a6c26",
+      "commit": true
+    },
+    {
+      "path": "malformed/broken_ccitt.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "CCITTFaxDecode image with garbage.",
+      "failure": "corrupted",
+      "bytes": 5829,
+      "sha256": "450c2e6426c1ba341573e274fe192fdf467b2d5a2abfd42ca8e0f2ef06c434d2",
+      "commit": true
+    },
+    {
+      "path": "malformed/image_size_mismatch.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Raw 640x480 RGB image with only 100 bytes.",
+      "failure": "corrupted",
+      "bytes": 855,
+      "sha256": "20cb7ae47f428c0070173a137ad0eca5b14ff8cdfe09e37482cc042263228cfc",
+      "commit": true
+    },
+    {
+      "path": "malformed/xref_stream_loop.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Extra startxref section pointing to offset 0.",
+      "failure": "corrupted",
+      "bytes": 1610,
+      "sha256": "683715a670310defa7cd695e9e5c55374bcd783119d4ea974d33d8f0d87535c2",
+      "commit": true
+    },
+    {
+      "path": "malformed/many_incremental_updates.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "tiny.pdf plus 300 incremental-update sections whose /Prev chain loops.",
+      "failure": "corrupted",
+      "bytes": 27189,
+      "sha256": "c8f85992d2f03959d867dc44c3a112a9e665934fd4add09958673fc059ba3ab7",
+      "commit": true
+    },
+    {
+      "path": "malformed/pdf_version_garbage.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Header claims PDF version 9.9.",
+      "failure": "corrupted",
+      "bytes": 1592,
+      "sha256": "389871779ed9a7843c99013d049b13f9b810f9dc88ee43b4883b23b6b261dccf",
+      "commit": true
+    },
+    {
+      "path": "malformed/null_bytes_in_names.pdf",
+      "category": "malformed",
+      "expect": "fails_or_opens",
+      "description": "Names with #00, invalid #ZZ hex escapes.",
+      "failure": "corrupted",
+      "bytes": 614,
+      "sha256": "0baa68c923a69b5749fcfbcb28c1f6ea775d0dd4a3e62e2df0c8f4ee6358883f",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_000.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of tiny.pdf: insert, insert, insert, byte, token, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "tiny.pdf"
+      },
+      "bytes": 1722,
+      "sha256": "b011ff24d1be92b6a8de9fbc1460324c169f85b4ed8fd7f6245aca48ccac1410",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_001.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of mixed_rotation.pdf: delete, dup, truncate, dup, insert, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "mixed_rotation.pdf"
+      },
+      "bytes": 1709,
+      "sha256": "4802e03e12cfcda4d6f10748cef49116abd6bb2b180ce244aaa8c468dd374f92",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_002.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of annotated.pdf: insert, flip, delete, token, delete, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "annotated.pdf"
+      },
+      "bytes": 2319,
+      "sha256": "49bf5797984112b176197a4bf390197109705b1ed47fd335a03cdd3af6e08ffc",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_003.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/png_renamed.pdf: byte, insert, token, truncate, dup, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/png_renamed.pdf"
+      },
+      "bytes": 225,
+      "sha256": "586be2d3838a29f99166349c5e1f900b1f1750a9cae63a4f36a54c4c6e4def19",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_004.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zip_renamed.pdf: delete, flip, flip, truncate, token, flip, truncate, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zip_renamed.pdf"
+      },
+      "bytes": 35,
+      "sha256": "8434c3b69e5c21fd5b770edae3da12a81297f4e4b679e3915f1430cb96634cf2",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_005.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/text_renamed.pdf: number, flip, dup, delete, truncate, flip, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/text_renamed.pdf"
+      },
+      "bytes": 902,
+      "sha256": "789e24e205078fcb864eb5b9ff07937138d02d9ecba9fcd6f10837073e5f3510",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_006.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_xref_offsets.pdf: delete, token, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_xref_offsets.pdf"
+      },
+      "bytes": 1372,
+      "sha256": "9d5409babf45e361be13d4dae04af4da49951f60083eb904cce3062d79e53ded",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_007.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_startxref.pdf: truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_startxref.pdf"
+      },
+      "bytes": 1485,
+      "sha256": "777b95d33e1b4090d37aafefe0764563f41cfd0ffa5425e47ae099fdad91a5e0",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_008.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_trailer.pdf: byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_trailer.pdf"
+      },
+      "bytes": 1338,
+      "sha256": "88c510f7e651f23d167750135b4217ada513b97325d074e059467bcf1e67f207",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_009.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_root.pdf: dup, byte, dup, flip, dup, number, truncate, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_root.pdf"
+      },
+      "bytes": 1477,
+      "sha256": "ef83fd10bc73a8102945378ac74f2b7e176146abee780f3299c76bb165fc2e3c",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_010.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_pages_tree.pdf: number, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_pages_tree.pdf"
+      },
+      "bytes": 348,
+      "sha256": "ca70b4e56c46d290f2bff318202814dcbee13a0aad93be88b9038d31afc39a5a",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_011.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_objects.pdf: dup, byte, truncate, delete, token, number, byte, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_objects.pdf"
+      },
+      "bytes": 403,
+      "sha256": "23f66ac5b695b63e1de9d8cbd468e5c5b455a1b2163a532a96be971bbaf95bea",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_012.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_outline.pdf: dup, flip, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_outline.pdf"
+      },
+      "bytes": 850,
+      "sha256": "748e659ddb8856aaefbac481360c6a32e7efaa632006a7abf4789376cd7edf8f",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_013.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_page_count.pdf: delete, truncate, truncate, token, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_page_count.pdf"
+      },
+      "bytes": 104,
+      "sha256": "a10e26a32f0b2955efbd9594acb6dd4f2aacc647259a23b664c7b1ccc2536459",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_014.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/negative_page_count.pdf: dup, dup, insert, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/negative_page_count.pdf"
+      },
+      "bytes": 935,
+      "sha256": "333d3097b3f85ff2e51c81c92311bd1e12ffd0e7a0f19966b4b99d101013748d",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_015.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_mediabox.pdf: flip, token, delete, truncate, number, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_mediabox.pdf"
+      },
+      "bytes": 476,
+      "sha256": "3d2c5171902cf8d2b295a1d272efe64dcb41e5a0e470adecd5c4c31c8380fd94",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_016.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/inverted_mediabox.pdf: token, insert, flip, insert, token, token, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/inverted_mediabox.pdf"
+      },
+      "bytes": 674,
+      "sha256": "30a261ca53965c2897535a07a37072c81709b6d58ed7fcd15918188af7cbda71",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_017.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zero_mediabox.pdf: flip, flip, token, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zero_mediabox.pdf"
+      },
+      "bytes": 407,
+      "sha256": "c817929940872af010b512f8581c376603828415d9b9eda0422c1e751b52df1b",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_018.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/nan_mediabox.pdf: number, delete, flip, insert, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/nan_mediabox.pdf"
+      },
+      "bytes": 598,
+      "sha256": "8c9ebfa0e061e22dcfe5628a591b6bf1408026d41d93156572fb82ae739b2e26",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_019.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/decompression_bomb.pdf: token, byte, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/decompression_bomb.pdf"
+      },
+      "bytes": 2218,
+      "sha256": "18fb7353c97b68466e365684742a6415c8d37925ccf52d7b994f8daab38f49f4",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_020.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_bomb.pdf: flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_bomb.pdf"
+      },
+      "bytes": 2791,
+      "sha256": "7490b5c9cb9bd5b0e465af3f453c88b54c2089cce4dfba4afb51ca45564b17bd",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_021.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_flate.pdf: flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_flate.pdf"
+      },
+      "bytes": 4670,
+      "sha256": "22f30fa86fd9c68a308e46989d636276a651291448bd3c69bf41ccd0e17416fc",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_022.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/wrong_length.pdf: delete, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/wrong_length.pdf"
+      },
+      "bytes": 357,
+      "sha256": "6b9cb7dad0a926a60bace821a7bfe186a66cb9701955c0b859906d9df91ad907",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_023.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/invalid_fonts.pdf: insert, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/invalid_fonts.pdf"
+      },
+      "bytes": 5381,
+      "sha256": "b843cb7d8b828dd7e0911cb667d3a0d85e6d4fdfb60b8b5aac2620e31159ffb0",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_024.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpeg.pdf: truncate, dup, dup, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpeg.pdf"
+      },
+      "bytes": 6247,
+      "sha256": "9bdee59499d2a77babc3f70f8a96be7850feace97f1704e7b0408d2d150500e5",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_025.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpx.pdf: delete, dup, number, byte, dup, truncate, delete, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpx.pdf"
+      },
+      "bytes": 5837,
+      "sha256": "4e5c7b4fd26551b7279c47326f6aad17ce405113ee57137b5421b87d2f5df24f",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_026.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jbig2.pdf: insert, flip, insert, token, insert, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jbig2.pdf"
+      },
+      "bytes": 8500,
+      "sha256": "57db7d79baf7c872b3185f0b1cfcc2fa5f4adc96da6d6a75a49bc900ea785d84",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_027.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_ccitt.pdf: insert, truncate, truncate, number, flip, number, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_ccitt.pdf"
+      },
+      "bytes": 607,
+      "sha256": "252b3b0f336832ac6feac7d2dd092655c201e055fb119e3a5d7460fccf3ba677",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_028.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_size_mismatch.pdf: truncate, number, number, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_size_mismatch.pdf"
+      },
+      "bytes": 924,
+      "sha256": "f9d9917936fe51e389b509007100d2ace69f1c287de267a7a4071ba84ed24853",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_029.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/xref_stream_loop.pdf: byte, number, insert, truncate, byte, dup, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/xref_stream_loop.pdf"
+      },
+      "bytes": 359,
+      "sha256": "fb1ef065b455a4b74455e617ba0deaf4e739cf6dcc3e5b130f3216e4e52d5d4d",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_030.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/pdf_version_garbage.pdf: delete, byte, dup, number, dup, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/pdf_version_garbage.pdf"
+      },
+      "bytes": 2104,
+      "sha256": "0f1e44cc93a717740a1518626f489f0facb0e55c487d83fceb54abf683ef0dc6",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_031.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/null_bytes_in_names.pdf: insert, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/null_bytes_in_names.pdf"
+      },
+      "bytes": 682,
+      "sha256": "a4db0685dc454c13f4beadc08cffb9720db947a232ba1d523c0e9204d176b0ab",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_032.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of tiny.pdf: token, flip, flip, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "tiny.pdf"
+      },
+      "bytes": 1597,
+      "sha256": "ad25a181ae22970f9f850c9c18b85b2469f7d2ae60e498b03ef6096ef0e6e211",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_033.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of mixed_rotation.pdf: flip, flip, delete, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "mixed_rotation.pdf"
+      },
+      "bytes": 5435,
+      "sha256": "5c9a83a606b269350e8cf0c1453573e4ebadd43a4342106eaf4ac3608dfbd2f6",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_034.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of annotated.pdf: delete, number, token, dup, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "annotated.pdf"
+      },
+      "bytes": 3103,
+      "sha256": "85403ef9ecf9b88ec7bac65abe81a12b4e4e67005b2ba9c04413698db788c444",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_035.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/png_renamed.pdf: dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/png_renamed.pdf"
+      },
+      "bytes": 214,
+      "sha256": "2b3d151e83f5862cbb2ceffca4c0d4489960d44a53e5a9d7d849911557688ec9",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_036.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zip_renamed.pdf: byte, token, insert, delete, token, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zip_renamed.pdf"
+      },
+      "bytes": 942,
+      "sha256": "5db7f08545d41f560f62dc1289d51345789eccb391f03a47079fd13fb1315737",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_037.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/text_renamed.pdf: insert, dup, truncate, flip, flip, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/text_renamed.pdf"
+      },
+      "bytes": 1027,
+      "sha256": "fcbfefeccb449c6c8ae3d64af9818d55653b2dc1ce2367b53a3fa2822972c409",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_038.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_xref_offsets.pdf: token, delete, insert, number, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_xref_offsets.pdf"
+      },
+      "bytes": 1490,
+      "sha256": "48e1d83fd10c5a9ef8b70b29ebe5e73bce201dacb06291e37ae9667c2e2c536a",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_039.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_startxref.pdf: token, delete, number, number, flip, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_startxref.pdf"
+      },
+      "bytes": 1313,
+      "sha256": "b7e9c77cfc6b9e6686d2857a089977f5cffcc3bab6dc629105373eb4b3cfc9bc",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_040.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_trailer.pdf: number, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_trailer.pdf"
+      },
+      "bytes": 1364,
+      "sha256": "38098475cfaa95836a4ee0c72094d1b61e5e308ed10ff03c916b635288aa0541",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_041.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_root.pdf: token, flip, dup, number, flip, token, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_root.pdf"
+      },
+      "bytes": 1708,
+      "sha256": "bb646d4df42fbaf8dd62efeaf322dd174709fa5800c1186c67f96e2baf5d0def",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_042.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_pages_tree.pdf: delete, truncate, dup, byte, dup, insert, token, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_pages_tree.pdf"
+      },
+      "bytes": 61,
+      "sha256": "604237fcbdb841b3476d778de9b7895dc3908505174ff4aa594056c3ac83a910",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_043.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_objects.pdf: flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_objects.pdf"
+      },
+      "bytes": 1017,
+      "sha256": "1f45aa570c9c2cf06357afbd5309d2716c938a0f085ceacd05ac8bf8c024c2c6",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_044.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_outline.pdf: delete, flip, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_outline.pdf"
+      },
+      "bytes": 689,
+      "sha256": "ffe54ca9d6df4bcdcddaf99d58d5d2dfe6abe02f8bb503e6768db878a14e10a6",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_045.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_page_count.pdf: dup, dup, dup, flip, insert, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_page_count.pdf"
+      },
+      "bytes": 902,
+      "sha256": "9f9ccfa455077c4edfa1fec51c7caf9a1e4f283a1ba698b8ed0d07509f7fb3ce",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_046.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/negative_page_count.pdf: dup, number, flip, dup, flip, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/negative_page_count.pdf"
+      },
+      "bytes": 729,
+      "sha256": "001254bea28b2a1ece44a1f6e392329161d39002964d55946ac7981741c37eaf",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_047.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_mediabox.pdf: dup, number, dup, delete, token, token, dup, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_mediabox.pdf"
+      },
+      "bytes": 904,
+      "sha256": "3348e69c87085b8fac230afcda5f9c7280c20b5e89f664b2ee3913dffe1d128a",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_048.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/inverted_mediabox.pdf: truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/inverted_mediabox.pdf"
+      },
+      "bytes": 590,
+      "sha256": "256880aa070764540d3c02f4381440a78083228f5813116ca54d78a0effa9771",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_049.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zero_mediabox.pdf: insert, insert, insert, byte, token, insert, flip, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zero_mediabox.pdf"
+      },
+      "bytes": 739,
+      "sha256": "bacb64fc9925b3ff8802e1b397e17e633c5e523e3e1f632b92a6fdd007245701",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_050.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/nan_mediabox.pdf: byte, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/nan_mediabox.pdf"
+      },
+      "bytes": 595,
+      "sha256": "9e8c66ae8d7e6a86fd302f4047b54d7940064facc64e67d372b24d7ea2f72ffb",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_051.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/decompression_bomb.pdf: dup, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/decompression_bomb.pdf"
+      },
+      "bytes": 2713,
+      "sha256": "072673ddb08f845c3e3d1a13cb90def814247e41fdcaef6e4464607a0f2de403",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_052.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_bomb.pdf: flip, token, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_bomb.pdf"
+      },
+      "bytes": 2794,
+      "sha256": "32801d96e56321515f275851e1d549d627b4b21b2feaa6b1fb5d5017bc5bb593",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_053.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_flate.pdf: dup, truncate, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_flate.pdf"
+      },
+      "bytes": 4990,
+      "sha256": "5acb02d1ac11b8924e133399e99d86e53af64c284db0c3666934421a8b31b58d",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_054.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/wrong_length.pdf: token, byte, truncate, truncate, number, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/wrong_length.pdf"
+      },
+      "bytes": 565,
+      "sha256": "da8b6fdb869fcac022b8c15d1500a0b9bd12d7c4a6c015eeff4e862f479ffa74",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_055.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/invalid_fonts.pdf: delete, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/invalid_fonts.pdf"
+      },
+      "bytes": 4675,
+      "sha256": "747de085dfcfc7378d5d4fee4e8291f35220de91b1dcc7b1dfb27503996564ab",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_056.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpeg.pdf: insert, insert, byte, insert, delete, flip, byte, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpeg.pdf"
+      },
+      "bytes": 5873,
+      "sha256": "612b0266adf7a22ccad9bbf96a7904eb5ecd09e35b7d2b70edc3588181234bfc",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_057.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpx.pdf: insert, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpx.pdf"
+      },
+      "bytes": 5851,
+      "sha256": "6d058b022408b4031b62df8bdef020de713fe6c13f9e157ed1f35d9819da8fcf",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_058.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jbig2.pdf: dup, dup, number, insert, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jbig2.pdf"
+      },
+      "bytes": 8134,
+      "sha256": "c026e91f53912525a63b83c0b851c629048ed6530b6b4dd92dabfc02b38227f2",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_059.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_ccitt.pdf: truncate, dup, insert, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_ccitt.pdf"
+      },
+      "bytes": 2480,
+      "sha256": "c14734171a47c89ca4039c25a3fa1c7208e59502de1407b313a5618afb5b4a28",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_060.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_size_mismatch.pdf: number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_size_mismatch.pdf"
+      },
+      "bytes": 851,
+      "sha256": "83e6b3bb3d04cd11f8205e45951fc688045e22cbf3d194ecbce2b7f765dce56c",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_061.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/xref_stream_loop.pdf: dup, dup, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/xref_stream_loop.pdf"
+      },
+      "bytes": 2046,
+      "sha256": "0ea2b4fc7c701d2cc35e60b37dace80fc618b431e1f83b1881f1f0d67f2eefbb",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_062.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/pdf_version_garbage.pdf: dup, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/pdf_version_garbage.pdf"
+      },
+      "bytes": 1656,
+      "sha256": "4997b7170405adc71a80e8e553873165444605d54acacae703c8965c936fb7a2",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_063.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/null_bytes_in_names.pdf: number, dup, flip, truncate, number, truncate, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/null_bytes_in_names.pdf"
+      },
+      "bytes": 48,
+      "sha256": "99b1c23d2d0dc47da1344fc55cf7310ae873a2113eb2a6c9af98005905d052b6",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_064.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of tiny.pdf: flip, dup, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "tiny.pdf"
+      },
+      "bytes": 1805,
+      "sha256": "79362b927aeca201c08e898d6fbd4ad6d57e6685797ba1fe40cd48aa90c0e64c",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_065.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of mixed_rotation.pdf: token, truncate, truncate, delete, insert, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "mixed_rotation.pdf"
+      },
+      "bytes": 1407,
+      "sha256": "a2b75908038a0f30c9ccd1d64786269733c895f19bed0203466fe641fb800103",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_066.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of annotated.pdf: byte, byte, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "annotated.pdf"
+      },
+      "bytes": 2599,
+      "sha256": "2ae106a85b27a54b67de2d1f5c60ade82de1664780b645bc338450844b779572",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_067.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/png_renamed.pdf: dup, byte, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/png_renamed.pdf"
+      },
+      "bytes": 186,
+      "sha256": "0a14e99bb2afc68105cb35e7efb2acd266e4e67fb2e70d7a34c2ca33ffb4d72d",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_068.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zip_renamed.pdf: truncate, truncate, dup, insert, number, byte, token, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zip_renamed.pdf"
+      },
+      "bytes": 145,
+      "sha256": "e7050f0b8167c266722c95345039b671bf38673f3afc45ac010d1274a74d95cb",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_069.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/text_renamed.pdf: insert, number, insert, token, insert, byte, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/text_renamed.pdf"
+      },
+      "bytes": 877,
+      "sha256": "6c4c52f2c810a462fe819800d919688738251ee3a050065de70b13e8def488c8",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_070.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_xref_offsets.pdf: byte, dup, byte, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_xref_offsets.pdf"
+      },
+      "bytes": 1534,
+      "sha256": "53963cbdfe66d6a639784ae66c979df2fab9d81b102921356feb9ac0b65d270f",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_071.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_startxref.pdf: delete, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_startxref.pdf"
+      },
+      "bytes": 1230,
+      "sha256": "34cdd8bab64a3d75b0561eddf6afa5c76fb90a2ae285c2322202d6a1c56f6d53",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_072.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_trailer.pdf: dup, delete, truncate, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_trailer.pdf"
+      },
+      "bytes": 1547,
+      "sha256": "73f5392243643c05ea1984fa17db1566feca428cf666fa33160fb26b1200db04",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_073.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_root.pdf: dup, token, flip, truncate, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_root.pdf"
+      },
+      "bytes": 1576,
+      "sha256": "3d9179e6b2aa4a5f30f4d041846d8733f7396c087213b95b77c5493793dea756",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_074.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_pages_tree.pdf: insert, byte, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_pages_tree.pdf"
+      },
+      "bytes": 371,
+      "sha256": "88c2f8749c8cdfdbc40d9723059f2af72e8da24f993d6f8c1228dad7f96dd1c4",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_075.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_objects.pdf: truncate, token, insert, dup, byte, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_objects.pdf"
+      },
+      "bytes": 1482,
+      "sha256": "edffba98e81639710e3155e02a9f482c30f24b00c8ce6dc107cf1e1dd421f7f8",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_076.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_outline.pdf: dup, byte, insert, insert, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_outline.pdf"
+      },
+      "bytes": 487,
+      "sha256": "b2dea8741b6fca4cf12e4f0f429fb704e9fec57d305ef965de17b150f3c087ee",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_077.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_page_count.pdf: truncate, truncate, token, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_page_count.pdf"
+      },
+      "bytes": 1027,
+      "sha256": "12c23a4e325e6cdda7f50431fb0096466fb6a36ceb05d2f3b2f436e8415b9015",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_078.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/negative_page_count.pdf: number, flip, number, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/negative_page_count.pdf"
+      },
+      "bytes": 596,
+      "sha256": "31fcb2023cc535d1b80916e168ab8565c223e0a89c66a91a79f5e126386d7357",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_079.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_mediabox.pdf: dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_mediabox.pdf"
+      },
+      "bytes": 720,
+      "sha256": "1bac483de96861d0252ba9dc4b553a482d1b2ddf31ec1bf83985d182d5e1c203",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_080.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/inverted_mediabox.pdf: flip, truncate, dup, truncate, flip, flip, number, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/inverted_mediabox.pdf"
+      },
+      "bytes": 542,
+      "sha256": "0b0f5cf7a4005d0489f415a048c026772452c61ec33d113ed547c8b8bdd36d63",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_081.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zero_mediabox.pdf: flip, dup, dup, truncate, delete, number, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zero_mediabox.pdf"
+      },
+      "bytes": 518,
+      "sha256": "756288a092a6c24b2f11b6f85464b9e225dd652486d356a4c8616ecef823db00",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_082.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/nan_mediabox.pdf: number, delete, number, delete, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/nan_mediabox.pdf"
+      },
+      "bytes": 209,
+      "sha256": "ecc40902558287dc4f3c2768967c062977d2d19fbe9de8379bd8a12f00fa9bcb",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_083.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/decompression_bomb.pdf: flip, number, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/decompression_bomb.pdf"
+      },
+      "bytes": 2395,
+      "sha256": "48922084622fd1e52466a9dc75fe01e8aab6332eb7313f51a487fc9fecbf2d1c",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_084.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_bomb.pdf: delete, delete, flip, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_bomb.pdf"
+      },
+      "bytes": 2711,
+      "sha256": "f3ec1a1fb064007ff8bb5a9bb0338d21212e48ead71d2dc645504adbb58bd873",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_085.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_flate.pdf: byte, dup, token, flip, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_flate.pdf"
+      },
+      "bytes": 5037,
+      "sha256": "a7c2f439ca7461e0cd4d3f74597968e80c288b1518145502ec9b816d9b6a352f",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_086.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/wrong_length.pdf: dup, dup, number, byte, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/wrong_length.pdf"
+      },
+      "bytes": 1217,
+      "sha256": "a29516f59919b4d056f7a5bad97c3464eefa83fc566989a0cb14ef76709ab01e",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_087.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/invalid_fonts.pdf: insert, truncate, delete, number, insert, insert, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/invalid_fonts.pdf"
+      },
+      "bytes": 5202,
+      "sha256": "fd436da12299aa77d7f221bf70ba7b28a1ce9ef2f940b610826a86b0c2689ffc",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_088.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpeg.pdf: truncate, token, insert, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpeg.pdf"
+      },
+      "bytes": 5798,
+      "sha256": "f2b12141877c89cb159b42c0c0cb88304444fc1fbfabb3ef3a242219f9fe46aa",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_089.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpx.pdf: truncate, number, flip, token, dup, insert, number, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpx.pdf"
+      },
+      "bytes": 6018,
+      "sha256": "5da1e8d97d801faa9c9f8cad72098afb6f643f1300cd25100854bc096e7c8c99",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_090.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jbig2.pdf: insert, number, delete, flip, truncate, flip, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jbig2.pdf"
+      },
+      "bytes": 7865,
+      "sha256": "acfc82a4ca0f881d554f8e0e263a2b17e8f0e12c47f0ee78a1674bd3845860b7",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_091.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_ccitt.pdf: dup, truncate, flip, truncate, truncate, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_ccitt.pdf"
+      },
+      "bytes": 6316,
+      "sha256": "b0e46954172aac223f774995d036025dc379fab061634f0ff87d9e744c1114c3",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_092.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_size_mismatch.pdf: flip, token, byte, flip, truncate, flip, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_size_mismatch.pdf"
+      },
+      "bytes": 865,
+      "sha256": "1a89b154a371395d5c41296bb06bbe490c3524fc8b8be6e38f09ec2ba6680e0c",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_093.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/xref_stream_loop.pdf: number, dup, truncate, insert, byte, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/xref_stream_loop.pdf"
+      },
+      "bytes": 1827,
+      "sha256": "3012cd5af998bf20057af03cc604476612ee7eefd418ed349ae3cfbf38094551",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_094.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/pdf_version_garbage.pdf: truncate, flip, token, dup, truncate, insert, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/pdf_version_garbage.pdf"
+      },
+      "bytes": 471,
+      "sha256": "c3317bc75a6f135b5f2e4e8a057db0e5b9664f1f05ec4631070b34cfa05de7a2",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_095.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/null_bytes_in_names.pdf: number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/null_bytes_in_names.pdf"
+      },
+      "bytes": 614,
+      "sha256": "072f7926871a057204154512ca74a01619eb0e4753db398608731e5985cc75c8",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_096.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of tiny.pdf: truncate, truncate, dup, truncate, dup, delete, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "tiny.pdf"
+      },
+      "bytes": 547,
+      "sha256": "58dfa668faaa5bb95ac19990eb223981b06d94882a9a4a57fcd489c2eea3ac1c",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_097.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of mixed_rotation.pdf: flip, token, delete, dup, flip, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "mixed_rotation.pdf"
+      },
+      "bytes": 5912,
+      "sha256": "fef4aabafa620ec17f1b47372d21ac9c1b48c865417ed146f6c67617a9170c1b",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_098.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of annotated.pdf: insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "annotated.pdf"
+      },
+      "bytes": 2653,
+      "sha256": "23bf334cd3e9eba04a1772116920755c865c5771ad05e165eeab0b5db6d6d546",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_099.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/png_renamed.pdf: byte, number, truncate, byte, delete, dup, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/png_renamed.pdf"
+      },
+      "bytes": 138,
+      "sha256": "94895b63567f8b5f95d5246137f0e4a9dfeddac3173ee315fa617b08cb7c10a8",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_100.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zip_renamed.pdf: insert, truncate, flip, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zip_renamed.pdf"
+      },
+      "bytes": 431,
+      "sha256": "edce57e20395cd309af706cf222885ebf5a04173c5c75e3cf8ed32bf5eae32b8",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_101.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/text_renamed.pdf: insert, number, insert, number, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/text_renamed.pdf"
+      },
+      "bytes": 728,
+      "sha256": "794af211bc769aeb387f891abb5b5059840140def514d50db8184b2f1063ce49",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_102.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_xref_offsets.pdf: token, number, number, token, delete, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_xref_offsets.pdf"
+      },
+      "bytes": 1385,
+      "sha256": "c07d13173fc454c147eeac9a5b4b78bf41dd4219705efc7d6a0a8275fd75e5d6",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_103.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_startxref.pdf: truncate, insert, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_startxref.pdf"
+      },
+      "bytes": 1542,
+      "sha256": "f7ad6cf2fa6a1cb358ad3decd910c99c70ca271cd5c66dfa75626284e670bd99",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_104.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_trailer.pdf: number, token, insert, byte, truncate, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_trailer.pdf"
+      },
+      "bytes": 1135,
+      "sha256": "291a466be08eed477e5d7b5579b8c09b359b11fcc83707a8737d9e39c48ae62c",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_105.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_root.pdf: insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_root.pdf"
+      },
+      "bytes": 1411,
+      "sha256": "7376a168c52234ec159f82b87e5f4d4ebae076de901f594362dc85ea64f071da",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_106.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_pages_tree.pdf: byte, flip, token, truncate, dup, flip, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_pages_tree.pdf"
+      },
+      "bytes": 458,
+      "sha256": "37690ba7677ab6c78a294e9337c0c4286464e8e5399792a00d0f6e1fcdd8dbb5",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_107.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_objects.pdf: insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_objects.pdf"
+      },
+      "bytes": 1032,
+      "sha256": "02b6ffa138bebd8d4968923b1b9a6f644563111f23fd4b7685615e5ddc278b9b",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_108.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_outline.pdf: dup, token, byte, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_outline.pdf"
+      },
+      "bytes": 1077,
+      "sha256": "886801ccafddee563fa148211d7deb33a765690c4f0b85896b295c1d8f2d9ed0",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_109.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_page_count.pdf: flip, truncate, truncate, insert, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_page_count.pdf"
+      },
+      "bytes": 120,
+      "sha256": "ec1179f973a6895d2f3968e7fde84ed37a13bc394d8f4bc2dc677c927c737cc7",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_110.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/negative_page_count.pdf: flip, token, delete, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/negative_page_count.pdf"
+      },
+      "bytes": 508,
+      "sha256": "13d74045fe25298d14f17826841bec7f5dba249020628b576f0927416ffa3552",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_111.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_mediabox.pdf: number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_mediabox.pdf"
+      },
+      "bytes": 604,
+      "sha256": "982a9195df9d9e9ee1f85d0797ed7bd50aa559a2a7df0fc9e31f39addba499ab",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_112.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/inverted_mediabox.pdf: byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/inverted_mediabox.pdf"
+      },
+      "bytes": 590,
+      "sha256": "8e5e01599c91423a567becc64bddc5c541301781324851f07807354d26bfbb06",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_113.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zero_mediabox.pdf: insert, token, delete, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zero_mediabox.pdf"
+      },
+      "bytes": 417,
+      "sha256": "15bc3d7289a10de248a3c1d9d5409cb3a9b511ac4ccfa4b2e70478e7e553d834",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_114.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/nan_mediabox.pdf: byte, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/nan_mediabox.pdf"
+      },
+      "bytes": 612,
+      "sha256": "2d27fa88ac9b316a6feed423e5a34737fd41b87c18be9ad0b1c8a4e3a2ac7798",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_115.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/decompression_bomb.pdf: truncate, delete, dup, delete, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/decompression_bomb.pdf"
+      },
+      "bytes": 1991,
+      "sha256": "d875935a7b80d82eb8ee261301450f0684ec95aafea021d0ec6b49ad1c7b7131",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_116.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_bomb.pdf: delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_bomb.pdf"
+      },
+      "bytes": 2687,
+      "sha256": "fe86703a5c0a2fe0bbcd356022ef5d784da89cc4c6fe67a7158954c88cf1fac4",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_117.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_flate.pdf: byte, flip, number, delete, dup, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_flate.pdf"
+      },
+      "bytes": 4454,
+      "sha256": "103ff5e9ff20d11bcf758e95bb1340473011f294b97df6c0901973c80d470ce5",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_118.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/wrong_length.pdf: insert, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/wrong_length.pdf"
+      },
+      "bytes": 611,
+      "sha256": "f1a80edc706d62ae90e7a587898203994377e2c0aea6bce92433d3570863577a",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_119.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/invalid_fonts.pdf: dup, insert, delete, number, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/invalid_fonts.pdf"
+      },
+      "bytes": 4933,
+      "sha256": "366ab2fe9abc2cf5443073f9946be835bbc0f718077ecb378412778c420f2c68",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_120.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpeg.pdf: delete, delete, token, flip, dup, flip, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpeg.pdf"
+      },
+      "bytes": 2468,
+      "sha256": "b17aa4df7893ba1c0510f06717a70cede1e20845bfa72d4d2d02e4013a9e0acc",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_121.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpx.pdf: token, byte, truncate, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpx.pdf"
+      },
+      "bytes": 6109,
+      "sha256": "a6b423a646183de3bc6536e685e2386ef5ed091ea23610d8729ea8cd2c050537",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_122.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jbig2.pdf: byte, delete, dup, truncate, insert, byte, delete, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jbig2.pdf"
+      },
+      "bytes": 8265,
+      "sha256": "8483be88e56a014ac673f4071461d0c69089719b5001d1d45a32bacef1263e36",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_123.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_ccitt.pdf: insert, truncate, number, flip, token, flip, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_ccitt.pdf"
+      },
+      "bytes": 5904,
+      "sha256": "8461cb2fb9f89d3df73f60ce6fc25542c1b23c12ed769d7a99a83f844bcd5058",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_124.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_size_mismatch.pdf: insert, byte, token, insert, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_size_mismatch.pdf"
+      },
+      "bytes": 903,
+      "sha256": "5cc65fd3102ca3272fec33f1313b13f4ca5527f50ee88eb06c5bb3f9d0e2d3d6",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_125.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/xref_stream_loop.pdf: dup, delete, insert, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/xref_stream_loop.pdf"
+      },
+      "bytes": 1522,
+      "sha256": "27e8badcceccb7fd99a8e3dad1a8edfb531a1f3865060bc58fe81ca46e1887f2",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_126.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/pdf_version_garbage.pdf: truncate, flip, insert, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/pdf_version_garbage.pdf"
+      },
+      "bytes": 964,
+      "sha256": "cf635847121ce9fa78d99f9f876d5cb6c26ab1b75cf27af7171392ea1fdae5e2",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_127.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/null_bytes_in_names.pdf: byte, truncate, number, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/null_bytes_in_names.pdf"
+      },
+      "bytes": 610,
+      "sha256": "a5807a7efdd4a33cd22ac68f71a636d045e82a7eedae5e7c74b40cfb6f831a7a",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_128.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of tiny.pdf: insert, dup, number, number, byte, dup, truncate, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "tiny.pdf"
+      },
+      "bytes": 2114,
+      "sha256": "234af1975419c3a22432f77eca5533f203f2c7247e8b540aa010e302f2a95e20",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_129.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of mixed_rotation.pdf: number, token, number, delete, delete, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "mixed_rotation.pdf"
+      },
+      "bytes": 5370,
+      "sha256": "23701069b5d613a99471f1b2079804a22a9069823c9b9bc57df0fbe2a18b6a54",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_130.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of annotated.pdf: delete, truncate, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "annotated.pdf"
+      },
+      "bytes": 1746,
+      "sha256": "028ea5fdff6145fd54b2b64f381ea62de016d666e4fa2aee0bb4127476e06a61",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_131.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/png_renamed.pdf: insert, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/png_renamed.pdf"
+      },
+      "bytes": 176,
+      "sha256": "62cfad4f929a05ad1e0c0698b944d966ad5c7584a2b4a2650f9a2690440d2915",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_132.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zip_renamed.pdf: byte, number, flip, byte, token, flip, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zip_renamed.pdf"
+      },
+      "bytes": 1125,
+      "sha256": "093913905adc39db0540d6fda69a2544e1ae4787d236067f70b4654bef8a85d9",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_133.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/text_renamed.pdf: delete, insert, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/text_renamed.pdf"
+      },
+      "bytes": 682,
+      "sha256": "0e2ca35f2df09e7a6f8d85675f1270ac1fabb6f44ef7a57f3e0facf1cac64bcd",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_134.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_xref_offsets.pdf: flip, token, byte, dup, flip, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_xref_offsets.pdf"
+      },
+      "bytes": 2117,
+      "sha256": "487a2118ed9a7ff174a81f9ac025c18570a8728590c4aff3964d8d74695e3c34",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_135.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_startxref.pdf: token, byte, token, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_startxref.pdf"
+      },
+      "bytes": 1548,
+      "sha256": "9c017bfe3aa1abee84ab04ecb626a8b80210539bc89f6f6b21bf811fb437fbb1",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_136.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_trailer.pdf: dup, flip, flip, dup, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_trailer.pdf"
+      },
+      "bytes": 1897,
+      "sha256": "0980b895e413eb1762046155033284663cc0437bc3e4c816cbf8f1a183d664d7",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_137.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_root.pdf: insert, byte, token, insert, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_root.pdf"
+      },
+      "bytes": 1500,
+      "sha256": "f702a75c3a1d7177963747d1cd28b2d1a08b06dc3ac215ade25662399f0dac15",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_138.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_pages_tree.pdf: dup, number, insert, number, truncate, flip, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_pages_tree.pdf"
+      },
+      "bytes": 70,
+      "sha256": "c936a4f9a109ae109001d72be43813560ad8a40f62eff49617c703caf07231c0",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_139.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_objects.pdf: byte, number, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_objects.pdf"
+      },
+      "bytes": 1026,
+      "sha256": "ef57433d385e6edd87623cb4665269ed586dd4f682fb5e339a8d5441a4b7ebbf",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_140.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_outline.pdf: insert, token, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_outline.pdf"
+      },
+      "bytes": 783,
+      "sha256": "facc8dc626d512bb693d0c2c14c9796079038604bda2a5048684b6abe37502a3",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_141.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_page_count.pdf: dup, delete, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_page_count.pdf"
+      },
+      "bytes": 527,
+      "sha256": "2ed3adc700cb37b9e05c4f3f77ac163fb307e2916eb488b4c8e48ed26004ea73",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_142.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/negative_page_count.pdf: insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/negative_page_count.pdf"
+      },
+      "bytes": 623,
+      "sha256": "960d262d9f8a13635efc4b3cf56acc4f24358778f0e10c7cb086560445715bcb",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_143.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_mediabox.pdf: number, dup, delete, token, flip, truncate, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_mediabox.pdf"
+      },
+      "bytes": 108,
+      "sha256": "cd6b7e45f1e789d472bcf4f669ec927a98ee2b2a555f811b001bc718149d69ab",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_144.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/inverted_mediabox.pdf: dup, byte, dup, delete, token, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/inverted_mediabox.pdf"
+      },
+      "bytes": 1050,
+      "sha256": "9d510d2720164cc72a13017443b1182984908c13ecfd74dead805cbe8bafbd88",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_145.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zero_mediabox.pdf: truncate, delete, truncate, insert, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zero_mediabox.pdf"
+      },
+      "bytes": 304,
+      "sha256": "a97f46f46ad9e5c9d5e699fe4b1a4a5d0ad2ae69eb947513980a8095c885e165",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_146.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/nan_mediabox.pdf: dup, flip, insert, insert, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/nan_mediabox.pdf"
+      },
+      "bytes": 635,
+      "sha256": "e4859a19d717813c5bc10097d089b89675835f4e37ff7cb4eca5eb71091efc5b",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_147.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/decompression_bomb.pdf: flip, number, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/decompression_bomb.pdf"
+      },
+      "bytes": 2395,
+      "sha256": "23e34b150ccb24f3af8a76247be466829801db4204cc96ba4f32eb7c4ce4e2fb",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_148.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_bomb.pdf: delete, flip, flip, flip, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_bomb.pdf"
+      },
+      "bytes": 2562,
+      "sha256": "fdc35495af5e34e0e5c5537accc6f1dbfb5cc74aef50736cf027f994d9bc8d77",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_149.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_flate.pdf: delete, dup, number, token, delete, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_flate.pdf"
+      },
+      "bytes": 4781,
+      "sha256": "f59e46387080308b99bac00830c5130fce23c7e03e92948d22513b7937ca7222",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_150.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/wrong_length.pdf: byte, token, delete, truncate, byte, flip, insert, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/wrong_length.pdf"
+      },
+      "bytes": 201,
+      "sha256": "34447fd57ffa44a2d6464f44ba17d4cad67c0b1ca044f88442a7384e6782db82",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_151.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/invalid_fonts.pdf: truncate, byte, number, insert, byte, flip, delete, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/invalid_fonts.pdf"
+      },
+      "bytes": 4635,
+      "sha256": "6d2c6d13a08f327d27ad45776b8bbb217789d7572c74596eff6897a2f5930b64",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_152.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpeg.pdf: flip, flip, truncate, truncate, flip, dup, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpeg.pdf"
+      },
+      "bytes": 6274,
+      "sha256": "9ad87328253b0cff124273d2416fc5de3c584a9b1e28e87269097126461560f6",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_153.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpx.pdf: insert, token, truncate, byte, delete, delete, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpx.pdf"
+      },
+      "bytes": 5599,
+      "sha256": "2abba0bfa7f49c03c52de62c21806dcb86117c5c35ee31daecdf8c3a59114a61",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_154.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jbig2.pdf: delete, flip, flip, token, byte, flip, insert, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jbig2.pdf"
+      },
+      "bytes": 7791,
+      "sha256": "2ea45ac1aa024ae42392d45e29753f142f947e376feadf3e96f19be4dea77e0c",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_155.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_ccitt.pdf: dup, token, insert, token, token, number, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_ccitt.pdf"
+      },
+      "bytes": 6248,
+      "sha256": "a48b82210de39c0d4e8e9d170322f8c2b946e62a342c49bba6509854c37166ec",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_156.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_size_mismatch.pdf: dup, number, delete, flip, dup, number, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_size_mismatch.pdf"
+      },
+      "bytes": 1483,
+      "sha256": "f64d3d96c72505930054148cd946457d1c5e82355852c45cbfb1b30c8095c5ec",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_157.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/xref_stream_loop.pdf: byte, byte, insert, byte, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/xref_stream_loop.pdf"
+      },
+      "bytes": 1924,
+      "sha256": "0601c00b76263dff4c39af71f6405310c4ce99b87ce27e457f1250e7e0f50aed",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_158.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/pdf_version_garbage.pdf: token, insert, delete, number, flip, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/pdf_version_garbage.pdf"
+      },
+      "bytes": 1448,
+      "sha256": "646a606883dba84f6c9b243adc60f7159bacf1e1296316ea205a2539091481c7",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_159.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/null_bytes_in_names.pdf: byte, truncate, token, number, flip, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/null_bytes_in_names.pdf"
+      },
+      "bytes": 659,
+      "sha256": "583129c8ccb94def8bec36d97fb636cf754d5348342674966778e8971214ad34",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_160.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of tiny.pdf: token, byte, number, number, byte, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "tiny.pdf"
+      },
+      "bytes": 1970,
+      "sha256": "db3aface7b0f07b08d3b75dc8b9f413c0265f084ebdf23d7c7353453ff533a07",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_161.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of mixed_rotation.pdf: flip, flip, flip, flip, insert, byte, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "mixed_rotation.pdf"
+      },
+      "bytes": 5939,
+      "sha256": "a265d5e5cb2dee364d7660735bdc81d6347ca08a295321c1b5ba4c7fcb9cd909",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_162.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of annotated.pdf: number, truncate, truncate, truncate, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "annotated.pdf"
+      },
+      "bytes": 2476,
+      "sha256": "fc72aaa6ed28eea1025c0c9b92d8efea22062261e7a57cc0871d17ead6d38ff8",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_163.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/png_renamed.pdf: number, flip, truncate, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/png_renamed.pdf"
+      },
+      "bytes": 75,
+      "sha256": "1335e2d77608d219884ea0dfeb3ba65445b72c7d2674b45e956b2b96aa2084e3",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_164.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zip_renamed.pdf: delete, flip, byte, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zip_renamed.pdf"
+      },
+      "bytes": 1007,
+      "sha256": "57354a62b9e983b0f1108505962d3deed407bb8db2271d12ad1a30f39a874cdf",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_165.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/text_renamed.pdf: dup, number, number, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/text_renamed.pdf"
+      },
+      "bytes": 800,
+      "sha256": "9f0a484a3c977331f6e0cdfac9a431581dc02df2dfe842479bee4cacad8bca14",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_166.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_xref_offsets.pdf: flip, delete, insert, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_xref_offsets.pdf"
+      },
+      "bytes": 1351,
+      "sha256": "ae0ed75d3692497c59f4635177827917e4e64900268d21955d883edba18d8e27",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_167.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_startxref.pdf: delete, flip, byte, dup, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_startxref.pdf"
+      },
+      "bytes": 1881,
+      "sha256": "f62edb88d8232f256605be6c3da42447c1c5ce7fc941c09e4afbb197ca01ee40",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_168.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_trailer.pdf: truncate, number, delete, dup, token, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_trailer.pdf"
+      },
+      "bytes": 1714,
+      "sha256": "6fe12fac3ed36b9fd4bc1c7f77fd7f69ba8d8017116749ffd403736ef57742c9",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_169.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/missing_root.pdf: delete, dup, insert, insert, number, truncate, insert, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/missing_root.pdf"
+      },
+      "bytes": 1871,
+      "sha256": "2245a391218b5f795e67a6f620fd1f08467b7ad0e3544588731ac2e3d656febe",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_170.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_pages_tree.pdf: byte, flip, token, delete, token, token, token, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_pages_tree.pdf"
+      },
+      "bytes": 145,
+      "sha256": "60f4637aee114b564fe492a7b19af87d672e3d34e5b439dc63c2b233e0f39fe8",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_171.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_objects.pdf: delete, flip, truncate, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_objects.pdf"
+      },
+      "bytes": 697,
+      "sha256": "f02a929e08a16b1eb652efc6b1b13131c2d964a7cd292ee5bf05f0b1d402aa43",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_172.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/circular_outline.pdf: byte, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/circular_outline.pdf"
+      },
+      "bytes": 710,
+      "sha256": "6d2b0f1455ce85901206d0ff52f12d72fcb06b9a2fe3ca47ba0b251c47868889",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_173.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_page_count.pdf: insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_page_count.pdf"
+      },
+      "bytes": 611,
+      "sha256": "0caa895b9cf9976a7de158616380f8b45a30962ed9f77ba226138e4ac1987828",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_174.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/negative_page_count.pdf: number, number, byte, byte, token, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/negative_page_count.pdf"
+      },
+      "bytes": 654,
+      "sha256": "4bdc3097c2749f61cd8a184db971ace640535431d0923874f62953ea2b056749",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_175.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/huge_mediabox.pdf: dup, number, delete, dup, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/huge_mediabox.pdf"
+      },
+      "bytes": 794,
+      "sha256": "a6cb4348d54d3a7cf4a7e80ede14009fd3de0bea7cd59ac34d5c2c2ee87b544e",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_176.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/inverted_mediabox.pdf: number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/inverted_mediabox.pdf"
+      },
+      "bytes": 591,
+      "sha256": "80698bd25877da94256230edd66e4c1f184ee1020a95704c99f1fe118d70bd37",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_177.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zero_mediabox.pdf: insert, number, number, delete, dup, truncate, number, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zero_mediabox.pdf"
+      },
+      "bytes": 712,
+      "sha256": "0f6bebe437322ce16ad7f51ba116f375e818aa6b70c71de6f1e59b48d3a2735a",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_178.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/nan_mediabox.pdf: delete, insert, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/nan_mediabox.pdf"
+      },
+      "bytes": 410,
+      "sha256": "ddc1d3601c4802e3d0686f1e89fd012f3d01dcc5c6bf9865cbc07d719c049765",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_179.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/decompression_bomb.pdf: truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/decompression_bomb.pdf"
+      },
+      "bytes": 2393,
+      "sha256": "19570adca8a34edc95679d222547fbb458ec43e897cb764314553c4a97251dfd",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_180.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_bomb.pdf: token, truncate, truncate, truncate, dup, token, token, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_bomb.pdf"
+      },
+      "bytes": 2929,
+      "sha256": "c33d34eeaac48acfef86517ee36cfc4dee34076b3f538bf069fdd956a1055ec9",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_181.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_flate.pdf: number, flip, insert, byte, insert.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_flate.pdf"
+      },
+      "bytes": 4704,
+      "sha256": "33326d97397b5ab5e73ec09ae31b153b4d7359377a525d7549e92022577146fd",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_182.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/wrong_length.pdf: flip, insert, insert, delete, delete, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/wrong_length.pdf"
+      },
+      "bytes": 399,
+      "sha256": "f0f225c9776ea8498d649bdb6c551d42b01cbc1dfc7607b4cd1a3f66b66f50d2",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_183.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/invalid_fonts.pdf: byte, byte, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/invalid_fonts.pdf"
+      },
+      "bytes": 4864,
+      "sha256": "3a6fe24c044397b01ef5c53bf8022e2e86c78b10d0b4a613c35a65f56b24b140",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_184.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpeg.pdf: token, insert, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpeg.pdf"
+      },
+      "bytes": 1494,
+      "sha256": "3b029efe452174f8670b08271f266aca214cbde67c69a14a78e86ef8d624f6af",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_185.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jpx.pdf: truncate, flip, delete, delete, byte, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jpx.pdf"
+      },
+      "bytes": 2414,
+      "sha256": "5d96a9c1253c6adc37c7ee046b5daa3a0097889df6ca3609f2071f7f78a72a36",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_186.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_jbig2.pdf: number, dup, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_jbig2.pdf"
+      },
+      "bytes": 8258,
+      "sha256": "6ce2a829a225ef71fc8135cbc9eaacbb9ea79915498d9c769574065e62be1056",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_187.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/broken_ccitt.pdf: dup, truncate, number, insert, delete, flip, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/broken_ccitt.pdf"
+      },
+      "bytes": 2283,
+      "sha256": "24687db74a9a0551db9b65bcf9d01ca013d59820d816d1a7ec11a1737aa523d5",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_188.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/image_size_mismatch.pdf: truncate, flip, flip, truncate, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/image_size_mismatch.pdf"
+      },
+      "bytes": 226,
+      "sha256": "679ffa62470eb01630c350acb5af82a6766938f2d1759fe8706c1eef73f35895",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_189.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/xref_stream_loop.pdf: number, dup, insert, number, insert, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/xref_stream_loop.pdf"
+      },
+      "bytes": 1592,
+      "sha256": "2484bca96a7177611e7eb514f21ed4cb96aea83cdf2abbb366591163097f8111",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_190.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/pdf_version_garbage.pdf: token, delete, dup, byte, token, dup, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/pdf_version_garbage.pdf"
+      },
+      "bytes": 2012,
+      "sha256": "d392a9ef8bf7933969601669850a0c56c481c5a3c24e31d097e93ecf1bdf691a",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_191.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/null_bytes_in_names.pdf: insert, dup, delete, flip.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/null_bytes_in_names.pdf"
+      },
+      "bytes": 393,
+      "sha256": "d3da79ba89c8f921289f3c4b0ae55d225fefa5b3ad76653a966e00478963746a",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_192.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of tiny.pdf: flip, number, token, flip, number.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "tiny.pdf"
+      },
+      "bytes": 1616,
+      "sha256": "c4d27fd16ccb50da06f40d60b7549bf1a0c05c841ea51a3d06dd512df696ffe5",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_193.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of mixed_rotation.pdf: flip, number, truncate, flip, number, byte, delete, token.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "mixed_rotation.pdf"
+      },
+      "bytes": 5560,
+      "sha256": "3e4e9b4f6ae00a4e457365a92d9f2e16510e68c409ec8eb8b8f69b799b7c9655",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_194.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of annotated.pdf: truncate, number, number, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "annotated.pdf"
+      },
+      "bytes": 283,
+      "sha256": "f894d811c8b5a688938633416e8f805d293837740c4e455928e17c85c8c29051",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_195.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/png_renamed.pdf: token, byte, insert, dup, delete.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/png_renamed.pdf"
+      },
+      "bytes": 58,
+      "sha256": "e1b41f13852bfaf306d7fcde3963f155fe0c4d3be8c6af9e1f8f35e95b75adff",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_196.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/zip_renamed.pdf: number, delete, token, byte, byte, truncate.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/zip_renamed.pdf"
+      },
+      "bytes": 970,
+      "sha256": "23467fe3a55c47f3e4a8652e293ae35cbb0ee5b2167cb73df83d50923b162824",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_197.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/text_renamed.pdf: byte, dup, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/text_renamed.pdf"
+      },
+      "bytes": 1023,
+      "sha256": "07834512cf9dd1917d73b12c26075fd7dbcd82d89e689dc7a94d1563709ef272",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_198.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_xref_offsets.pdf: insert, token, byte.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_xref_offsets.pdf"
+      },
+      "bytes": 1503,
+      "sha256": "3e63dbfef3f1137c11d4fd6ad33b6399df7245c6b553d80e62a1640c0e4a48e7",
+      "commit": true
+    },
+    {
+      "path": "fuzz/fuzz_199.pdf",
+      "category": "fuzz",
+      "expect": "fails_or_opens",
+      "description": "Seeded mutation of malformed/bad_startxref.pdf: byte, token, flip, byte, byte, insert, insert, dup.",
+      "failure": "corrupted",
+      "features": {
+        "seed": "malformed/bad_startxref.pdf"
+      },
+      "bytes": 1668,
+      "sha256": "9af70a605c790a94bf0c8a523705e2cdf4ac0a809fb52fb47a16545543e24fc8",
+      "commit": true
+    }
+  ]
+}

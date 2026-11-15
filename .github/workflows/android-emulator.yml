@@ -1,0 +1,89 @@
+name: Android emulator
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 1' # weekly, Monday 03:17 UTC
+  pull_request:
+    paths:
+      - 'integration_test/**'
+      - 'android/**'
+      - '.github/workflows/android-emulator.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      API_LEVEL: 34
+      ARCH: x86_64
+      TARGET: google_apis
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.50.0
+          cache: true
+
+      - name: Generate corpus (incl. --huge) and integration fixtures
+        run: |
+          pip install -r tool/testdata/requirements.txt
+          python tool/testdata/make_corpus.py --out build/corpus --clean --huge \
+            --dart-fixtures integration_test/fixtures/corpus_fixtures.g.dart
+          flutter pub get
+
+      - name: Host engine tests on generated corpus (incl. huge.pdf timing)
+        env:
+          QA_CORPUS_DIR: build/corpus
+        run: flutter test test/qa/corpus_open_test.dart
+
+      - name: Integration tests on emulator (API ${{ env.API_LEVEL }} ${{ env.ARCH }})
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          arch: ${{ env.ARCH }}
+          target: ${{ env.TARGET }}
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6000M
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          # Each line runs as its own shell command.
+          script: |
+            mkdir -p build/screenshots
+            flutter test integration_test/app_flow_test.dart --reporter expanded
+            flutter drive --driver=integration_test/driver/perf_driver.dart --target=integration_test/app_flow_test.dart --dart-define=QA_SCREENSHOTS=true
+            flutter drive --driver=integration_test/driver/perf_driver.dart --target=integration_test/performance_test.dart --dart-define=QA_HUGE=true --dart-define=QA_SCREENSHOTS=true
+
+      - name: Upload performance results and screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-emulator-results
+          path: |
+            build/perf_summary.txt
+            build/integration_response_data.json
+            build/screenshots/
+            build/qa/
+          if-no-files-found: warn
