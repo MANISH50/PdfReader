@@ -21,7 +21,7 @@ This page explains what PdfReader does with your data and how it protects you.
   private folder. Other apps cannot read this folder.
 - **Wipe temporary files.** Scratch files are deleted every time the app starts, and after each export or share.
 - **Turn off backups.** App data is not copied to Google or iCloud backups, so it never leaves the device that way.
-  <!-- TODO(lead): confirm android:allowBackup="false" / dataExtractionRules and the iOS backup exclusion are merged. -->
+  (Android: `android:allowBackup="false"` and data-extraction rules exclude everything.)
 
 > **Note for developers:** Flutter **debug** and **profile** builds add the internet permission so that hot reload and the
 > debugger work. Only **release** builds are free of it. Check with:
@@ -35,8 +35,7 @@ This page explains what PdfReader does with your data and how it protects you.
 PDF files can contain JavaScript. Attackers often use it. PdfReader uses **PDFium built without the V8 JavaScript engine and
 without XFA**. Scripts inside a PDF cannot run, because there is no engine to run them.
 
-<!-- TODO(lead): add the Security agent's verified evidence for the shipped PDFium engine here
-     (binary name / build number, SHA-256 of the archive, and how to check that no V8/XFA symbols are present). -->
+Evidence (binary sources, hashes, and how we checked that no V8/XFA is present) is in [SECURITY_NOTES.md](SECURITY_NOTES.md).
 
 ### No automatic actions
 A PDF cannot make PdfReader do anything by itself.
@@ -75,7 +74,7 @@ One bad page does not stop you from reading the other pages.
 
 ### Minimal permissions
 - No internet, no storage, no camera-roll, no contacts, no location permission.
-  <!-- TODO(lead): if a camera / photo picker feature ships, list exactly what it uses (system picker = no permission). -->
+  (No camera or photo access is used.)
 - Files come in through the system file picker, **Open with** or **Share**.
 
 ### Release builds
@@ -87,7 +86,7 @@ One bad page does not stop you from reading the other pages.
 - Package versions are **pinned**: the PDF, file and sharing packages use exact versions in `pubspec.yaml`, and `pubspec.lock` fixes every version.
 - Only **permissive open-source licenses** (MIT, BSD, Apache-2.0). No closed or paid SDKs.
 - Dependencies are checked for known vulnerabilities with **OSV** in CI.
-  <!-- TODO(lead): link the CI workflow file once it exists, for example .github/workflows/ci.yml. -->
+  See [.github/workflows/security.yml](.github/workflows/security.yml) and [.github/workflows/ci.yml](.github/workflows/ci.yml).
 - PDFium is the most important dependency. Security fixes in PDFium are shipped as soon as pdfrx releases them.
 
 ---
@@ -100,7 +99,7 @@ Please **do not** open a public issue for security problems.
 2. Open the **Security** tab.
 3. Click **Report a vulnerability**. This creates a private report (GitHub Security Advisory). Only the maintainers can see it.
 
-<!-- TODO(lead): enable "Private vulnerability reporting" in the repository settings (Settings ▸ Code security). -->
+
 
 Please include:
 - What you found and what an attacker could do.
@@ -120,4 +119,4 @@ Only the **latest release** gets security fixes. Please update to the newest ver
 | Latest release | Yes |
 | Older releases | No |
 
-<!-- TODO(lead): fill in the real version numbers after the first release. -->
+

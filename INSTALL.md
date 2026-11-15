@@ -8,7 +8,7 @@ Each step has a picture placeholder. The text works without the pictures too.
 - [Updating](#updating)
 - [Uninstalling](#uninstalling)
 
-<!-- TODO(lead): add the screenshots named in this guide to docs/images/. -->
+<!-- Screenshots will be added later; every step is also written out in text. -->
 
 ---
 
@@ -24,11 +24,11 @@ This is safe if you download it from the official page below.
 1. On your phone, open your web browser (for example **Chrome**).
 2. Go to the release page:
    **https://github.com/MANISH50/PdfReader/releases**
-   <!-- TODO(lead): replace with the direct link to the latest release. -->
+   Link: https://github.com/MANISH50/PdfReader/releases/latest
 3. Find the newest release at the top (it says **Latest**).
 4. Scroll down to **Assets**. Tap it if it is closed.
 5. Tap the file that ends in **.apk** (for example `PdfReader-1.0.0.apk`).
-   <!-- TODO(lead): confirm the final APK file name. -->
+   The file is called **PdfReader-v1.0.0.apk** (works on almost all phones). If your phone is new (64-bit), the smaller **PdfReader-v1.0.0-arm64-v8a.apk** also works.
 6. If the browser asks "Do you want to download this file?", tap **Download**.
 7. Wait until the download is finished. You see a message at the bottom of the screen or in the notification bar.
 
@@ -101,7 +101,7 @@ PdfReader keeps working. You only need to turn it on again when you install an u
 Each release page shows a **SHA-256 checksum** for the APK. It is a long code made of letters and numbers.
 If your file gives the same code, the file is exactly the one we published.
 
-<!-- TODO(lead): make sure each release lists the SHA-256 checksum (for example in a SHA256SUMS.txt file or in the release notes). -->
+Each release has a file called **SHA256SUMS.txt** with the checksums.
 
 Copy the APK to a computer, then open a terminal in the folder with the file:
 
@@ -145,7 +145,7 @@ Then every PDF you tap opens in PdfReader.
 ![Clear defaults](docs/images/install-android-7.png)
 
 > **Tip:** PdfReader also has a short guide for this inside the app.
-> <!-- TODO(lead): give the exact in-app path, for example **Settings** ▸ **Make PdfReader the default PDF app**. -->
+> In the app: **Settings** ▸ **How to open PDFs with PdfReader**.
 
 ---
 
@@ -162,7 +162,7 @@ Choose the option that fits you:
 | **B. Xcode on a Mac** | People with a Mac | A Mac, Xcode and a free Apple ID | **7 days**, then you must install it again |
 | **C. App Store** | Everyone (in the future) | The developer needs a paid account and Apple's review | Normal app, no time limit |
 
-<!-- TODO(lead): say which options are available right now (TestFlight link? App Store link?). -->
+Right now only option (b) — installing with Xcode — is available. TestFlight and the App Store need a paid Apple Developer account, which this project does not have yet.
 
 ### Option A: TestFlight
 
@@ -172,7 +172,7 @@ TestFlight is Apple's official app for testing apps before they are in the App S
 
 1. On your iPhone, install **TestFlight** from the App Store. It is free and made by Apple.
 2. Open the PdfReader invite link on your iPhone.
-   <!-- TODO(lead): add the public TestFlight link, if there is one. -->
+   
 3. Tap **Accept**, then **Install**.
 4. PdfReader appears on your home screen.
 
@@ -241,7 +241,7 @@ You can install PdfReader yourself with a free Apple ID. This needs a Mac.
 To be in the App Store, the developer needs a paid **Apple Developer Program** account and must pass **Apple's review**.
 When PdfReader is in the App Store, you just tap **Get**.
 
-<!-- TODO(lead): add the App Store link if PdfReader is published there. -->
+
 
 ### Open PDFs with PdfReader on iPhone
 

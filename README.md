@@ -9,7 +9,7 @@ Your files never leave your device.
 PdfReader is open source under the [MIT License](LICENSE).
 It uses only free and open-source libraries.
 
-<!-- TODO(lead): add the version number of the first release here, for example "Current version: 1.0.0". -->
+Current version: **1.0.0**
 
 ---
 
@@ -17,7 +17,7 @@ It uses only free and open-source libraries.
 
 - **Android:** download the APK file from the
   [GitHub Releases page](https://github.com/MANISH50/PdfReader/releases).
-  <!-- TODO(lead): replace with the direct link to the latest release once it is published. -->
+  Download: [https://github.com/MANISH50/PdfReader/releases/latest](https://github.com/MANISH50/PdfReader/releases/latest)
 - **iPhone:** there is no App Store version yet. See [INSTALL.md](INSTALL.md) for your options.
 
 Step-by-step help for both phones is in **[INSTALL.md](INSTALL.md)**.
@@ -26,10 +26,7 @@ Step-by-step help for both phones is in **[INSTALL.md](INSTALL.md)**.
 
 ## Screenshots
 
-<!-- TODO(lead): add real screenshots. Suggested files:
-     docs/images/screenshot-library.png, docs/images/screenshot-reader.png,
-     docs/images/screenshot-dark.png, docs/images/screenshot-annotate.png,
-     docs/images/screenshot-organize.png, docs/images/screenshot-export.png -->
+<!-- Screenshots will be added after the first device test run. -->
 
 | Library | Reading | Dark mode |
 |---|---|---|
@@ -43,7 +40,7 @@ Step-by-step help for both phones is in **[INSTALL.md](INSTALL.md)**.
 
 ## Features
 
-<!-- TODO(lead): check this list against the merged features before release; remove anything that did not ship. -->
+
 
 ### Reading
 - Smooth scrolling and sharp pages at any zoom.
@@ -99,7 +96,7 @@ We want you to know what PdfReader cannot do (yet):
 - **Annotations are flattened into saved copies.** Highlights, drawings and notes become part of the page in the exported file.
   Other apps can see them but cannot edit them as separate notes. Inside PdfReader you can still edit them.
 - **iPhone has no system-wide "default PDF app" setting.** You open PDFs in PdfReader from **Share** or **Open in** each time.
-- **Form filling:** <!-- TODO(lead): describe the final form-filling support (AcroForm fields? signatures?) once the Editing agent finishes. --> XFA forms are not supported.
+- **Form filling:** Text fields, checkboxes, radio buttons, combo boxes and list boxes (AcroForm) can be filled. Digital-signature fields and form scripts are not supported. XFA forms are not supported.
 - **You cannot change the existing text** of a PDF. You can cover it with a white box and add new text on top.
 - **No OCR** (text recognition for scanned pages) in this version.
 

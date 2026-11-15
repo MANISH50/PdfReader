@@ -18,7 +18,7 @@ Feature work is on per-agent branches; paused agents keep their work and resume 
 | QA | **Merged** (corpus, engine robustness tests, helpers, integration tests, CI). Follow-ups: fake DocumentService limits, split active content out of text_multi.pdf |
 | Platform | **Merged** (open-with/share-in on Android & iOS with safe copy-in, share-out, system file picker, no INTERNET/storage permissions in release manifest). TODO: inbox cleanup when removed from recents; onboarding to use `DefaultAppInfo` + open-settings button |
 | UI | **Merged** (design system, home, onboarding, settings, icon & splash, accessibility tests). TODO: multi-file merge from Home, real thumbnails |
-| Security | Pre-scan for decompression bombs in progress (paused, last) |
+| Security | **Merged** (decompression-bomb pre-scan, safe-open helpers, punycode link display, release hardening, audit tooling: 0 known vulns, licences OK) |
 
 ### Lean process
 1. Max 2 agents at once; resume paused agents in the order above as slots free up.
@@ -27,6 +27,8 @@ Feature work is on per-agent branches; paused agents keep their work and resume 
 4. One independent security review agent at the end, plus CI on GitHub Actions for emulator/iOS tests.
 
 ## Next
+- Final security check (lead): done — links confirm-only, release manifest has no network/storage permissions, backups off.
+- Signed release APK/AAB build → publish GitHub Release after owner OK.
 - Step 4 — Full test run, CI emulator + iOS workflows, security review with malformed PDFs, performance checks, screenshots.
 - Step 5 — Signed APK/AAB, docs, GitHub Release (after owner OK).
 

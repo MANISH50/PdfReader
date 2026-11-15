@@ -6,15 +6,15 @@ It uses the open-source software listed below. Thank you to all their authors.
 This list shows the **main** dependencies. The app has a **Licenses** page (in **Settings**) that shows the full license
 text of **every** package included in the app, including packages pulled in by other packages.
 
-<!-- TODO(lead): confirm the in-app path to the Licenses page (for example Settings ▸ About ▸ Licenses). -->
+In the app: **Settings** ▸ **Licenses**.
 
 ## Runtime dependencies
 
 | Component | Version | License | Use in PdfReader |
 |---|---|---|---|
 | [Flutter](https://github.com/flutter/flutter) and the Dart SDK | 3.50.0 | BSD-3-Clause | App framework |
-| [material_ui](https://pub.dev/packages/material_ui) | 1.11.0 | BSD-3-Clause <!-- TODO(lead): verify --> | Material widgets |
-| [cupertino_ui](https://pub.dev/packages/cupertino_ui) | 1.1.6 | BSD-3-Clause <!-- TODO(lead): verify --> | iOS-style widgets |
+| [material_ui](https://pub.dev/packages/material_ui) | 1.11.0 | BSD-3-Clause | Material widgets |
+| [cupertino_ui](https://pub.dev/packages/cupertino_ui) | 1.1.6 | BSD-3-Clause | iOS-style widgets |
 | [cupertino_icons](https://pub.dev/packages/cupertino_icons) | 1.0.8 | MIT | iOS-style icons |
 | [pdfrx](https://pub.dev/packages/pdfrx) | 2.12.1 | MIT | PDF viewer, text, search, page editing |
 | [pdfrx_engine](https://pub.dev/packages/pdfrx_engine) | 0.9.2 | MIT | PDF engine layer (used by pdfrx) |
@@ -33,7 +33,7 @@ text of **every** package included in the app, including packages pulled in by o
 | [path](https://pub.dev/packages/path) | 1.9.x | BSD-3-Clause | File path helpers |
 | [crypto](https://pub.dev/packages/crypto) | 3.0.x | BSD-3-Clause | File hashes |
 
-<!-- TODO(lead): add any package that feature agents add to pubspec.yaml before release. -->
+Also: `url_launcher` (BSD-3), `wakelock_plus` (BSD-3), `pdfium_dart` (MIT), `ffi` (BSD-3). Full list with versions: in-app Licenses page and `pubspec.lock`.
 
 ## Build-time tools (not shipped in the app)
 
