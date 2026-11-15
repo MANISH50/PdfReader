@@ -51,7 +51,7 @@ class _GoToPageDialogState extends State<_GoToPageDialog> {
   Widget build(BuildContext context) => AlertDialog(
         title: const Text('Go to page'),
         content: TextField(
-          key: const Key('goToPageField'),
+          key: const Key('viewer.goToPage.field'),
           controller: _ctl,
           autofocus: true,
           keyboardType: TextInputType.number,
@@ -64,7 +64,7 @@ class _GoToPageDialogState extends State<_GoToPageDialog> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: _submit, child: const Text('Go')),
+          FilledButton(key: const Key('viewer.goToPage.ok'), onPressed: _submit, child: const Text('Go')),
         ],
       );
 }
@@ -108,7 +108,7 @@ class _PasswordDialogState extends State<_PasswordDialog> {
             Text('"${widget.fileName}" is protected. Enter its password to open it.'),
             const SizedBox(height: Space.md),
             TextField(
-              key: const Key('passwordField'),
+              key: const Key('password.field'),
               controller: _ctl,
               autofocus: true,
               obscureText: _obscure,
@@ -130,7 +130,10 @@ class _PasswordDialogState extends State<_PasswordDialog> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, _ctl.text), child: const Text('Open')),
+          FilledButton(
+              key: const Key('password.ok'),
+              onPressed: () => Navigator.pop(context, _ctl.text),
+              child: const Text('Open')),
         ],
       );
 }

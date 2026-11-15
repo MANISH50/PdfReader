@@ -109,27 +109,53 @@ class ReflowView extends StatefulWidget {
 }
 
 class ReflowViewState extends State<ReflowView> {
+  static const _maxCachedPages = 64;
   final _cache = <int, Future<List<String>>>{};
-  late final ScrollController _scroll = ScrollController();
-  final _keys = <int, GlobalKey>{};
-  late int _start = widget.initialPage.clamp(1, widget.pageCount < 1 ? 1 : widget.pageCount);
+  final _scroll = ScrollController();
+
+  /// Contexts of the page items currently built (visible + cache extent).
+  final _built = <int, BuildContext>{};
+  final _centerKey = UniqueKey();
+  late int _anchor = widget.initialPage.clamp(1, widget.pageCount < 1 ? 1 : widget.pageCount);
   int _reported = -1;
+  bool _scrollCheckScheduled = false;
 
-  Future<List<String>> _paras(int page) => _cache.putIfAbsent(page, () async {
-        try {
-          return reflowParagraphs(await widget.loadText(page));
-        } catch (_) {
-          return const <String>[];
-        }
-      });
+  Future<List<String>> _paras(int page) {
+    final hit = _cache.remove(page);
+    if (hit != null) return _cache[page] = hit; // move to most-recent
+    if (_cache.length >= _maxCachedPages) _cache.remove(_cache.keys.first);
+    return _cache[page] = () async {
+      try {
+        return reflowParagraphs(await widget.loadText(page));
+      } catch (_) {
+        return const <String>[];
+      }
+    }();
+  }
 
-  /// Shows [page] at the top (pages before it are re-added lazily on scroll up).
+  /// Shows [page] at the top. Pages before it stay reachable by scrolling up.
   void jumpToPage(int page) {
     setState(() {
-      _start = page.clamp(1, widget.pageCount);
+      _anchor = page.clamp(1, widget.pageCount);
       _reported = -1;
     });
-    if (_scroll.hasClients) _scroll.jumpTo(0);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealAnchor());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealAnchor());
+  }
+
+  /// Puts the anchor page just below the app bar (negative offsets scroll
+  /// into the pages built above the centre sliver).
+  void _revealAnchor() {
+    if (!mounted || !_scroll.hasClients) return;
+    final inset = MediaQuery.paddingOf(context).top + kToolbarHeight;
+    final target = -inset;
+    final pos = _scroll.position;
+    _scroll.jumpTo(target.clamp(pos.minScrollExtent, pos.maxScrollExtent));
   }
 
   @override
@@ -139,27 +165,81 @@ class ReflowViewState extends State<ReflowView> {
   }
 
   void _onScroll() {
-    // The first page whose header is at or above the viewport top is current.
-    var current = _start;
-    for (final e in _keys.entries) {
-      final ctx = e.value.currentContext;
-      final box = ctx?.findRenderObject();
-      if (box is! RenderBox || !box.attached) continue;
+    // The last built page whose top is at or above the reading line is current.
+    int? current;
+    for (final e in _built.entries) {
+      final box = e.value.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) continue;
       final dy = box.localToGlobal(Offset.zero).dy;
-      if (dy <= 160 && e.key > current) current = e.key;
+      if (dy <= 160 && (current == null || e.key > current)) current = e.key;
     }
+    current ??= _built.isEmpty ? _anchor : _built.keys.reduce((a, b) => a < b ? a : b);
     if (current != _reported) {
       _reported = current;
       widget.onPageChanged?.call(current);
     }
   }
 
+  Widget _pageItem(int page, TextStyle style, TextStyle headerStyle) => _TrackedPage(
+        key: ValueKey('viewer.page.$page'),
+        page: page,
+        registry: _built,
+        child: Padding(
+          padding: EdgeInsets.zero,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: Space.md),
+                    child: Semantics(header: true, child: Text('Page $page', style: headerStyle)),
+                  ),
+                  FutureBuilder<List<String>>(
+                    future: _paras(page),
+                    builder: (context, snap) {
+                      if (!snap.hasData) {
+                        return const Padding(
+                          padding: EdgeInsets.all(Space.lg),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final paras = snap.data!;
+                      if (paras.isEmpty) {
+                        return Text('No text on this page (it may be an image or scan).',
+                            style: style.copyWith(fontStyle: FontStyle.italic, fontSize: 15));
+                      }
+                      return SelectionArea(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (final p in paras)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: Space.md),
+                                child: Text(p, style: style),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final colors = reflowColors(widget.theme);
     final style = TextStyle(color: colors.text, fontSize: 18 * widget.fontScale, height: 1.55);
     final headerStyle = TextStyle(color: colors.text.withValues(alpha: 0.6), fontSize: 13);
-    final count = widget.pageCount - _start + 1;
+    final topInset = MediaQuery.paddingOf(context).top + kToolbarHeight;
+    final before = _anchor - 1; // pages 1.._anchor-1, built upward lazily
+    final after = widget.pageCount - _anchor + 1; // pages _anchor..N
+    const hPad = EdgeInsets.symmetric(horizontal: Space.lg);
     return ColoredBox(
       color: colors.background,
       child: GestureDetector(
@@ -167,67 +247,78 @@ class ReflowViewState extends State<ReflowView> {
         onTap: widget.onTap,
         child: NotificationListener<ScrollNotification>(
           onNotification: (_) {
-            _onScroll();
+            // Notifications can arrive during layout; measure after the frame.
+            if (!_scrollCheckScheduled) {
+              _scrollCheckScheduled = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _scrollCheckScheduled = false;
+                if (mounted) _onScroll();
+              });
+            }
             return false;
           },
           child: Scrollbar(
             controller: _scroll,
-            child: ListView.builder(
+            child: CustomScrollView(
+              key: const Key('viewer.scroll'),
               controller: _scroll,
-              padding: EdgeInsets.fromLTRB(
-                Space.lg, MediaQuery.paddingOf(context).top + kToolbarHeight, Space.lg, Space.xxl * 2),
-              itemCount: count < 0 ? 0 : count,
-              itemBuilder: (context, i) {
-                final page = _start + i;
-                final key = _keys.putIfAbsent(page, GlobalKey.new);
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: Column(
-                      key: key,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: Space.md),
-                          child: Semantics(header: true, child: Text('Page $page', style: headerStyle)),
-                        ),
-                        FutureBuilder<List<String>>(
-                          future: _paras(page),
-                          builder: (context, snap) {
-                            if (!snap.hasData) {
-                              return const Padding(
-                                padding: EdgeInsets.all(Space.lg),
-                                child: Center(child: CircularProgressIndicator()),
-                              );
-                            }
-                            final paras = snap.data!;
-                            if (paras.isEmpty) {
-                              return Text('No text on this page (it may be an image or scan).',
-                                  style: style.copyWith(fontStyle: FontStyle.italic, fontSize: 15));
-                            }
-                            return SelectionArea(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  for (final p in paras)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: Space.md),
-                                      child: Text(p, style: style),
-                                    ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ],
+              center: _centerKey,
+              slivers: [
+                // Space for the app bar above page 1 (reverse-growing slivers
+                // before the centre are laid out bottom-up, so this sits on top).
+                SliverToBoxAdapter(child: SizedBox(height: topInset)),
+                SliverPadding(
+                  padding: hPad,
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) => _pageItem(_anchor - 1 - i, style, headerStyle),
+                      childCount: before < 0 ? 0 : before,
                     ),
                   ),
-                );
-              },
+                ),
+                SliverPadding(
+                  key: _centerKey,
+                  padding: hPad.copyWith(bottom: Space.xxl * 2),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) => _pageItem(_anchor + i, style, headerStyle),
+                      childCount: after < 0 ? 0 : after,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Registers its context while mounted so scroll tracking only looks at
+/// pages that are actually built.
+class _TrackedPage extends StatefulWidget {
+  const _TrackedPage({super.key, required this.page, required this.registry, required this.child});
+  final int page;
+  final Map<int, BuildContext> registry;
+  final Widget child;
+  @override
+  State<_TrackedPage> createState() => _TrackedPageState();
+}
+
+class _TrackedPageState extends State<_TrackedPage> {
+  @override
+  void initState() {
+    super.initState();
+    widget.registry[widget.page] = context;
+  }
+
+  @override
+  void dispose() {
+    if (identical(widget.registry[widget.page], context)) widget.registry.remove(widget.page);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

@@ -172,6 +172,20 @@ void main() {
       await expectLater(svc.open(ref), failsWith(OpenFailure.timeout));
     });
 
+    test('no password dialog after the open already timed out', () async {
+      var asked = false;
+      final svc = PdfrxDocumentService(
+        opener: fakeEncrypted('right', delay: const Duration(milliseconds: 200)),
+        openTimeout: const Duration(milliseconds: 50),
+      );
+      await expectLater(svc.open(ref, askPassword: ({required bool retry}) async {
+        asked = true;
+        return 'right';
+      }), failsWith(OpenFailure.timeout));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(asked, isFalse);
+    });
+
     test('time spent typing a password does not count toward the timeout', () async {
       final svc = PdfrxDocumentService(
         opener: fakeEncrypted('right'),

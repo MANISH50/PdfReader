@@ -121,6 +121,8 @@ class PdfrxDocumentService implements DocumentService {
     var exhausted = false;
 
     Future<String?> provider() async {
+      // The attempt already timed out: never pop a dialog over the error.
+      if (attempt.isDone) return null;
       if (askPassword == null) {
         exhausted = true; // password required but nobody can supply one
         return null;
@@ -245,6 +247,8 @@ class _OpenAttempt {
   Timer? _timer;
   bool _timedOut = false;
   final _completer = Completer<PdfDocument>();
+
+  bool get isDone => _completer.isCompleted;
 
   Future<PdfDocument> run(Future<PdfDocument> Function() body) {
     _start();

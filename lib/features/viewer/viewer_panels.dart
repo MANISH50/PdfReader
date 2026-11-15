@@ -101,6 +101,43 @@ class OutlineList extends StatefulWidget {
   State<OutlineList> createState() => _OutlineListState();
 }
 
+/// One visible row of the flattened outline.
+class OutlineRow {
+  const OutlineRow(this.node, this.depth, this.path);
+  final PdfOutlineNode node;
+  final int depth;
+
+  /// Index path from the root; identifies the node for expansion state.
+  final String path;
+}
+
+/// Maximum outline depth shown (deeper nodes are not expandable).
+const int kMaxOutlineDepth = 16;
+
+/// Maximum number of rows ever materialised (guards against huge, possibly
+/// malicious outlines).
+const int kMaxOutlineRows = 5000;
+
+/// Flattens [nodes] into the rows currently visible given [expanded] paths.
+/// Only expanded subtrees are walked, and at most [maxRows] rows are produced.
+List<OutlineRow> flattenOutline(List<PdfOutlineNode> nodes, Set<String> expanded,
+    {int maxRows = kMaxOutlineRows}) {
+  final out = <OutlineRow>[];
+  void walk(List<PdfOutlineNode> list, int depth, String prefix) {
+    for (var i = 0; i < list.length; i++) {
+      if (out.length >= maxRows) return;
+      final path = prefix.isEmpty ? '$i' : '$prefix.$i';
+      out.add(OutlineRow(list[i], depth, path));
+      if (depth + 1 < kMaxOutlineDepth && list[i].children.isNotEmpty && expanded.contains(path)) {
+        walk(list[i].children, depth + 1, path);
+      }
+    }
+  }
+
+  walk(nodes, 0, '');
+  return out;
+}
+
 class _OutlineListState extends State<OutlineList> {
   late final Future<List<PdfOutlineNode>> _future = () async {
     try {
@@ -109,6 +146,14 @@ class _OutlineListState extends State<OutlineList> {
       return const <PdfOutlineNode>[];
     }
   }();
+  final _expanded = <String>{};
+  List<OutlineRow>? _rows;
+  List<PdfOutlineNode>? _nodes;
+
+  void _toggle(String path) => setState(() {
+        if (!_expanded.remove(path)) _expanded.add(path);
+        _rows = null;
+      });
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<PdfOutlineNode>>(
@@ -119,38 +164,38 @@ class _OutlineListState extends State<OutlineList> {
           if (nodes.isEmpty) {
             return const _EmptyPanel(icon: Icons.toc, text: 'This document has no table of contents.');
           }
-          return ListView(
+          if (!identical(nodes, _nodes)) {
+            _nodes = nodes;
+            _rows = null;
+          }
+          final rows = _rows ??= flattenOutline(nodes, _expanded);
+          return ListView.builder(
             controller: widget.scrollController,
-            children: [for (final n in nodes) _node(n, 0)],
+            itemCount: rows.length,
+            itemBuilder: (context, i) => _row(rows[i]),
           );
         },
       );
 
-  Widget _node(PdfOutlineNode n, int depth) {
+  Widget _row(OutlineRow r) {
+    final n = r.node;
     final title = n.title.trim().isEmpty ? 'Untitled' : n.title.trim();
     final page = n.dest?.pageNumber;
-    final trailing = page == null ? null : Text('$page');
-    final pad = EdgeInsets.only(left: Space.md + depth * Space.md, right: Space.md);
-    // Guard against absurdly deep (malicious) outlines.
-    if (n.children.isEmpty || depth >= 16) {
-      return ListTile(
-        contentPadding: pad,
-        title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
-        trailing: trailing,
-        enabled: n.dest != null,
-        onTap: n.dest == null ? null : () => widget.onSelect(n),
-      );
-    }
-    return ExpansionTile(
-      tilePadding: pad,
-      title: InkWell(
-        onTap: n.dest == null ? null : () => widget.onSelect(n),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: Space.sm),
-          child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
-        ),
-      ),
-      children: [for (final c in n.children) _node(c, depth + 1)],
+    final expandable = n.children.isNotEmpty && r.depth + 1 < kMaxOutlineDepth;
+    final open = _expanded.contains(r.path);
+    return ListTile(
+      contentPadding: EdgeInsets.only(left: Space.sm + r.depth * Space.md, right: Space.md),
+      leading: expandable
+          ? IconButton(
+              tooltip: open ? 'Collapse $title' : 'Expand $title',
+              icon: Icon(open ? Icons.expand_more : Icons.chevron_right),
+              onPressed: () => _toggle(r.path),
+            )
+          : const SizedBox(width: kMinTouchTarget),
+      title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
+      trailing: page == null ? null : Text('$page'),
+      enabled: n.dest != null || expandable,
+      onTap: n.dest != null ? () => widget.onSelect(n) : (expandable ? () => _toggle(r.path) : null),
     );
   }
 }

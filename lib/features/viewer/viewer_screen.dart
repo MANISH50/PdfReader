@@ -95,7 +95,9 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
   final _searchCtl = TextEditingController();
   final _searchFocus = FocusNode();
   bool _searchOpen = false;
-  double? _scrubValue;
+  final _scrub = ValueNotifier<double?>(null);
+  double _zoomAtStart = 1;
+  ProviderSubscription<AsyncValue<AppSettings>>? _settingsSub;
   int _swipeStartPage = 1;
   bool _spreadSuggested = false;
   bool? _wakelockOn;
@@ -108,6 +110,10 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _settingsSub = ref.listenManual<AsyncValue<AppSettings>>(settingsProvider, (_, next) {
+      final s = next.value;
+      if (s != null) _setWakelock(s.keepScreenOn);
+    }, fireImmediately: true);
     // After the first frame so the password dialog can be shown at once.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(_open());
@@ -196,13 +202,14 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
     _viewerGen++;
   }
 
-  void _onSessionChanged() {
-    if (mounted) setState(() {});
-    _setImmersive(!_s.chromeVisible);
-  }
+  // Page/zoom/bookmark/chrome changes rebuild only the chrome (scoped
+  // ListenableBuilders); mode and theme changes call setState explicitly.
+  void _onSessionChanged() => _setImmersive(!_s.chromeVisible);
 
+  // Repaint match highlights; the search bar listens to the searcher itself.
   void _onSearchChanged() {
-    if (mounted) setState(() {});
+    final c = _controller;
+    if (c != null && c.isReady && _pdfMode) c.invalidate();
   }
 
   @override
@@ -225,6 +232,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
     _searcher?.dispose();
     _session?.removeListener(_onSessionChanged);
     _session?.dispose(); // flushes reading state
+    _settingsSub?.close();
     _setWakelock(false);
     if (_immersive) {
       unawaited(_safeSystemUi(SystemUiMode.edgeToEdge));
@@ -242,6 +250,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
     _searchFocus.dispose();
     _currentPage.dispose();
     _editMode.dispose();
+    _scrub.dispose();
     super.dispose();
   }
 
@@ -345,7 +354,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
     } else if (_searchOpen) {
       _closeSearch();
     }
-    if (prevPdfMode && mode == ReadingMode.reflow) _editMode.value = false;
+    if (prevPdfMode && mode == ReadingMode.reflow && _editMode.value) _setEdit(false);
     setState(() {});
   }
 
@@ -404,7 +413,10 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
     }
   }
 
-  void _onInteractionStart(ScaleStartDetails d) => _swipeStartPage = _s.page;
+  void _onInteractionStart(ScaleStartDetails d) {
+    _swipeStartPage = _s.page;
+    _zoomAtStart = _readyController?.currentZoom ?? 1;
+  }
 
   void _onInteractionEnd(ScaleEndDetails d) {
     final c = _readyController;
@@ -425,7 +437,10 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
         return;
       }
     }
-    _s.setZoom(c.currentZoom, fitZoom: fz);
+    // Plain scrolling must not turn the fit mode into "custom" (e.g. pages of
+    // mixed widths in continuous mode): record only real scale changes.
+    final z = c.currentZoom;
+    if (_zoomAtStart > 0 && (z / _zoomAtStart - 1).abs() > 0.01) _s.setZoom(z, fitZoom: fz);
   }
 
   int _nearestPage(PdfViewerController c) {
@@ -601,8 +616,11 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
     }
   }
 
-  void _toggleEdit() {
-    final on = !_editMode.value;
+  void _toggleEdit() => _setEdit(!_editMode.value);
+
+  /// Single path for entering/leaving edit mode so plug-ins always get onEdit.
+  void _setEdit(bool on) {
+    if (_editMode.value == on) return;
     _editMode.value = on;
     if (on && !_pdfMode) _setMode(ReadingMode.continuous);
     _ext.onEdit?.call(context, _viewerContext, on);
@@ -617,6 +635,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
     switch (_phase) {
       case _Phase.loading:
         return Scaffold(
+          key: const Key('viewer.screen'),
           appBar: AppBar(title: Text(widget.document.displayName)),
           body: Center(
             child: Semantics(
@@ -634,12 +653,23 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
       case _Phase.ready:
         break;
     }
-    _setWakelock(settings.keepScreenOn);
     final spec = ReadingThemeSpec.of(settings.defaultPageTheme);
-    final chrome = _s.chromeVisible || _searchOpen;
     final duration = Motion.of(context, Motion.normal);
 
+    // Chrome rebuilds on session changes (page, bookmark, visibility) without
+    // rebuilding the PdfViewer.
+    Widget slot({required Offset offset, required Widget Function() child}) => ListenableBuilder(
+          listenable: _s,
+          builder: (context, _) => _ChromeSlot(
+            visible: _s.chromeVisible || _searchOpen,
+            offset: offset,
+            duration: duration,
+            child: child(),
+          ),
+        );
+
     return Scaffold(
+      key: const Key('viewer.screen'),
       backgroundColor: spec.background,
       body: Stack(
         children: [
@@ -648,28 +678,35 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
             left: 0,
             right: 0,
             top: 0,
-            child: _ChromeSlot(
-              visible: chrome,
+            child: slot(
               offset: const Offset(0, -1),
-              duration: duration,
-              child: _searchOpen ? _buildSearchBar() : _buildAppBar(),
+              child: () => _searchOpen ? _buildSearchBar() : _buildAppBar(),
             ),
           ),
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: _ChromeSlot(
-              visible: chrome,
-              offset: const Offset(0, 1),
-              duration: duration,
-              child: _buildBottomBar(),
-            ),
+            child: slot(offset: const Offset(0, 1), child: _buildBottomBar),
           ),
         ],
       ),
     );
   }
+
+  List<Widget> _pageOverlays(BuildContext context, Rect rect, PdfPage page) => [
+        // Lightweight marker so tests / tooling can find each laid-out page.
+        IgnorePointer(child: SizedBox.expand(key: Key('viewer.page.${page.pageNumber}'))),
+        if (_ext.pageOverlays.isNotEmpty) ..._buildPageOverlays(context, rect, page),
+      ];
+
+  // Never show pdfrx's default banner (raw error, stack trace, web link).
+  Widget _errorBanner(BuildContext context, Object error, StackTrace? st, PdfDocumentRef ref) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(Space.xl),
+          child: Text(describeFailure(OpenFailure.corrupted).message, textAlign: TextAlign.center),
+        ),
+      );
 
   Widget _buildBody(AppSettings settings, ReadingThemeSpec spec) {
     if (_s.mode == ReadingMode.reflow) {
@@ -689,55 +726,59 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
     }
     final c = _controller!;
     final searcher = _searcher!;
-    final ext = _ext;
-    return ValueListenableBuilder<bool>(
-      valueListenable: _editMode,
-      builder: (context, editing, _) => PdfViewer(
-        _ref!,
-        key: ValueKey('viewer$_viewerGen'),
-        controller: c,
-        initialPageNumber: _s.page,
-        params: PdfViewerParams(
-          margin: _margin,
-          backgroundColor: spec.background,
-          pageImageColorFilter: spec.filter,
-          layoutPages: _s.mode == ReadingMode.continuous ? null : _layoutPages,
-          pageAnchor: _s.mode == ReadingMode.continuous ? PdfPageAnchor.top : PdfPageAnchor.center,
-          onViewerReady: _onViewerReady,
-          onPageChanged: _onPageChanged,
-          onGeneralTap: _onGeneralTap,
-          onInteractionStart: _onInteractionStart,
-          onInteractionEnd: _onInteractionEnd,
-          getPageRenderingScale: _renderScale,
-          linkHandlerParams: PdfLinkHandlerParams(onLinkTap: _onLinkTap),
-          textSelectionParams: PdfTextSelectionParams(enabled: !editing),
-          matchTextColor: const Color(0x80FFEB3B),
-          activeMatchTextColor: const Color(0xA0FF9800),
-          pagePaintCallbacks: [searcher.pageTextMatchPaintCallback],
-          pageOverlaysBuilder: ext.pageOverlays.isEmpty ? null : _buildPageOverlays,
-          viewerOverlayBuilder: _s.mode == ReadingMode.singlePage
-              ? null
-              : (context, size, handleLinkTap) => [
-                    PdfViewerScrollThumb(
-                      controller: c,
-                      orientation: ScrollbarOrientation.right,
-                      thumbSize: const Size(44, 32),
-                      thumbBuilder: (context, thumbSize, pageNumber, controller) => Semantics(
-                        label: 'Scroll position, page ${pageNumber ?? ''}',
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondaryContainer,
-                            borderRadius: const BorderRadius.horizontal(left: Radius.circular(Radii.md)),
-                            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+    return KeyedSubtree(
+      // A fresh PdfViewer (and controller) per reading mode.
+      key: ValueKey('viewer$_viewerGen'),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _editMode,
+        builder: (context, editing, _) => PdfViewer(
+          _ref!,
+          key: const Key('viewer.scroll'),
+          controller: c,
+          initialPageNumber: _s.page,
+          params: PdfViewerParams(
+            margin: _margin,
+            backgroundColor: spec.background,
+            pageImageColorFilter: spec.filter,
+            layoutPages: _s.mode == ReadingMode.continuous ? null : _layoutPages,
+            pageAnchor: _s.mode == ReadingMode.continuous ? PdfPageAnchor.top : PdfPageAnchor.center,
+            onViewerReady: _onViewerReady,
+            onPageChanged: _onPageChanged,
+            onGeneralTap: _onGeneralTap,
+            onInteractionStart: _onInteractionStart,
+            onInteractionEnd: _onInteractionEnd,
+            getPageRenderingScale: _renderScale,
+            errorBannerBuilder: _errorBanner,
+            linkHandlerParams: PdfLinkHandlerParams(onLinkTap: _onLinkTap),
+            textSelectionParams: PdfTextSelectionParams(enabled: !editing),
+            matchTextColor: const Color(0x80FFEB3B),
+            activeMatchTextColor: const Color(0xA0FF9800),
+            pagePaintCallbacks: [searcher.pageTextMatchPaintCallback],
+            pageOverlaysBuilder: _pageOverlays,
+            viewerOverlayBuilder: _s.mode == ReadingMode.singlePage
+                ? null
+                : (context, size, handleLinkTap) => [
+                      PdfViewerScrollThumb(
+                        controller: c,
+                        orientation: ScrollbarOrientation.right,
+                        thumbSize: const Size(44, 32),
+                        thumbBuilder: (context, thumbSize, pageNumber, controller) => Semantics(
+                          label: 'Scroll position, page ${pageNumber ?? ''}',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.secondaryContainer,
+                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(Radii.md)),
+                              boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(pageNumber?.toString() ?? '',
+                                style: TextStyle(
+                                    fontSize: 12, color: Theme.of(context).colorScheme.onSecondaryContainer)),
                           ),
-                          alignment: Alignment.center,
-                          child: Text(pageNumber?.toString() ?? '',
-                              style: TextStyle(
-                                  fontSize: 12, color: Theme.of(context).colorScheme.onSecondaryContainer)),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+          ),
         ),
       ),
     );
@@ -750,8 +791,14 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
       title: Text(widget.document.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
       leading: BackButton(onPressed: () => Navigator.maybePop(context)),
       actions: [
-        IconButton(tooltip: 'Search in document', icon: const Icon(Icons.search), onPressed: _openSearch),
         IconButton(
+          key: const Key('viewer.search'),
+          tooltip: 'Search in document',
+          icon: const Icon(Icons.search),
+          onPressed: _openSearch,
+        ),
+        IconButton(
+          key: const Key('viewer.bookmark'),
           tooltip: bookmarked ? 'Remove bookmark from this page' : 'Bookmark this page',
           isSelected: bookmarked,
           icon: const Icon(Icons.bookmark_border),
@@ -759,12 +806,14 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
           onPressed: () => _s.toggleBookmark(),
         ),
         IconButton(
+          key: const Key('viewer.display'),
           tooltip: 'Reading mode, page colour and text size',
           icon: const Icon(Icons.text_format),
           onPressed: _showDisplaySheet,
         ),
         if (ext.onEdit != null)
           IconButton(
+            key: const Key('viewer.edit'),
             tooltip: _editMode.value ? 'Stop editing' : 'Edit',
             isSelected: _editMode.value,
             icon: const Icon(Icons.edit_outlined),
@@ -772,6 +821,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
             onPressed: _toggleEdit,
           ),
         PopupMenuButton<String>(
+          key: const Key('viewer.menu'),
           tooltip: 'More options',
           onSelected: (v) {
             switch (v) {
@@ -798,9 +848,9 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
             _menuItem('contents', Icons.toc, 'Contents'),
             _menuItem('bookmarks', Icons.bookmarks_outlined, 'Bookmarks'),
             const PopupMenuDivider(),
-            _menuItem('organize', Icons.view_module_outlined, 'Organize pages'),
-            _menuItem('export', Icons.file_download_outlined, 'Export'),
-            _menuItem('share', Icons.share_outlined, 'Share'),
+            _menuItem('organize', Icons.view_module_outlined, 'Organize pages', key: const Key('viewer.organize')),
+            _menuItem('export', Icons.file_download_outlined, 'Export', key: const Key('viewer.export')),
+            _menuItem('share', Icons.share_outlined, 'Share', key: const Key('viewer.share')),
             for (final a in ext.extraActions) _menuItem(a.id, a.icon, a.label),
           ],
         ),
@@ -808,49 +858,57 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
     );
   }
 
-  PopupMenuItem<String> _menuItem(String v, IconData icon, String label) => PopupMenuItem(
+  PopupMenuItem<String> _menuItem(String v, IconData icon, String label, {Key? key}) => PopupMenuItem(
+        key: key,
         value: v,
         child: ListTile(leading: Icon(icon), title: Text(label), contentPadding: EdgeInsets.zero),
       );
 
   Widget _buildSearchBar() {
     final s = _searcher!;
-    final total = s.matches.length;
-    final idx = s.currentIndex;
-    final label = _searchCtl.text.trim().isEmpty
-        ? ''
-        : total == 0
-            ? (s.isSearching ? 'Searching…' : 'No results')
-            : '${idx == null ? 0 : idx + 1} / $total${s.isSearching ? '+' : ''}';
-    return AppBar(
-      leading: IconButton(tooltip: 'Close search', icon: const Icon(Icons.close), onPressed: _closeSearch),
-      title: TextField(
-        key: const Key('searchField'),
-        controller: _searchCtl,
-        focusNode: _searchFocus,
-        textInputAction: TextInputAction.search,
-        decoration: const InputDecoration(hintText: 'Find in document', border: InputBorder.none),
-        onChanged: _onSearchText,
-        onSubmitted: (_) => unawaited(s.goToNextMatch()),
-      ),
-      actions: [
-        Center(
-          child: Semantics(
-            liveRegion: true,
-            child: Text(label, key: const Key('searchCount')),
+    return ListenableBuilder(
+      listenable: s,
+      builder: (context, _) {
+        final total = s.matches.length;
+        final idx = s.currentIndex;
+        final label = _searchCtl.text.trim().isEmpty
+            ? ''
+            : total == 0
+                ? (s.isSearching ? 'Searching…' : 'No results')
+                : '${idx == null ? 0 : idx + 1} of $total${s.isSearching ? '+' : ''}';
+        return AppBar(
+          leading: IconButton(tooltip: 'Close search', icon: const Icon(Icons.close), onPressed: _closeSearch),
+          title: TextField(
+            key: const Key('viewer.search.field'),
+            controller: _searchCtl,
+            focusNode: _searchFocus,
+            textInputAction: TextInputAction.search,
+            decoration: const InputDecoration(hintText: 'Find in document', border: InputBorder.none),
+            onChanged: _onSearchText,
+            onSubmitted: (_) => unawaited(s.goToNextMatch()),
           ),
-        ),
-        IconButton(
-          tooltip: 'Previous match',
-          icon: const Icon(Icons.keyboard_arrow_up),
-          onPressed: total == 0 ? null : () => unawaited(s.goToPrevMatch()),
-        ),
-        IconButton(
-          tooltip: 'Next match',
-          icon: const Icon(Icons.keyboard_arrow_down),
-          onPressed: total == 0 ? null : () => unawaited(s.goToNextMatch()),
-        ),
-      ],
+          actions: [
+            Center(
+              child: Semantics(
+                liveRegion: true,
+                child: Text(label, key: const Key('viewer.search.count')),
+              ),
+            ),
+            IconButton(
+              key: const Key('viewer.search.prev'),
+              tooltip: 'Previous match',
+              icon: const Icon(Icons.keyboard_arrow_up),
+              onPressed: total == 0 ? null : () => unawaited(s.goToPrevMatch()),
+            ),
+            IconButton(
+              key: const Key('viewer.search.next'),
+              tooltip: 'Next match',
+              icon: const Icon(Icons.keyboard_arrow_down),
+              onPressed: total == 0 ? null : () => unawaited(s.goToNextMatch()),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -862,65 +920,72 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
         child: SafeArea(top: false, child: ext.editToolbarBuilder!(context, _viewerContext)),
       );
     }
-    final count = _s.pageCount;
-    final page = _s.page;
-    final shown = (_scrubValue ?? page.toDouble()).round();
-    return Material(
-      elevation: 3,
-      color: Theme.of(context).colorScheme.surfaceContainer,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Space.xs),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'Pages, contents and bookmarks',
-                icon: const Icon(Icons.grid_view),
-                onPressed: () => _showNavigator(),
-              ),
-              Expanded(
-                child: count > 1
-                    ? Slider(
-                        key: const Key('pageScrubber'),
-                        min: 1,
-                        max: count.toDouble(),
-                        divisions: count > 1 ? count - 1 : null,
-                        value: (_scrubValue ?? page.toDouble()).clamp(1, count.toDouble()),
-                        label: 'Page $shown',
-                        semanticFormatterCallback: (v) => 'Page ${v.round()} of $count',
-                        onChanged: (v) => setState(() => _scrubValue = v),
-                        onChangeEnd: (v) {
-                          setState(() => _scrubValue = null);
-                          _goToPage(v.round());
-                        },
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              Semantics(
-                button: true,
-                label: 'Page $shown of $count. Go to page',
-                excludeSemantics: true,
-                child: InkWell(
-                  borderRadius: const BorderRadius.all(Radius.circular(Radii.sm)),
-                  onTap: _showGoToPage,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: kMinTouchTarget, minWidth: kMinTouchTarget),
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: Space.sm),
-                        child: Text('$shown / $count',
-                            key: const Key('pageIndicator'),
-                            style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
+    return ValueListenableBuilder<double?>(
+      valueListenable: _scrub,
+      builder: (context, scrub, _) {
+        final count = _s.pageCount;
+        final page = _s.page;
+        final shown = (scrub ?? page.toDouble()).round();
+        return Material(
+          elevation: 3,
+          color: Theme.of(context).colorScheme.surfaceContainer,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.xs),
+              child: Row(
+                children: [
+                  IconButton(
+                    key: const Key('viewer.navigator'),
+                    tooltip: 'Pages, contents and bookmarks',
+                    icon: const Icon(Icons.grid_view),
+                    onPressed: () => _showNavigator(),
+                  ),
+                  Expanded(
+                    child: count > 1
+                        ? Slider(
+                            key: const Key('viewer.scrubber'),
+                            min: 1,
+                            max: count.toDouble(),
+                            divisions: count - 1,
+                            value: (scrub ?? page.toDouble()).clamp(1, count.toDouble()),
+                            label: 'Page $shown',
+                            semanticFormatterCallback: (v) => 'Page ${v.round()} of $count',
+                            onChanged: (v) => _scrub.value = v,
+                            onChangeEnd: (v) {
+                              _scrub.value = null;
+                              _goToPage(v.round());
+                            },
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  Semantics(
+                    button: true,
+                    label: 'Page $shown of $count. Go to page',
+                    excludeSemantics: true,
+                    child: InkWell(
+                      key: const Key('viewer.goToPage'),
+                      borderRadius: const BorderRadius.all(Radius.circular(Radii.sm)),
+                      onTap: _showGoToPage,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: kMinTouchTarget, minWidth: kMinTouchTarget),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: Space.sm),
+                            child: Text('$shown / $count',
+                                key: const Key('viewer.pageIndicator'),
+                                style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -1036,6 +1101,7 @@ class _DisplaySheet extends StatelessWidget {
                 child: Tooltip(
                   message: themeLabel(t),
                   child: InkResponse(
+                    key: Key('viewer.theme.${t.name}'),
                     onTap: () => onTheme(t),
                     radius: 28,
                     child: Column(children: [

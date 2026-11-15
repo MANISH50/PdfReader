@@ -71,6 +71,20 @@ void main() {
       expect(capRenderScale(595, 842, 2), 2);
       final s = capRenderScale(14400, 14400, 10);
       expect(14400 * 14400 * s * s, lessThanOrEqualTo(SecurityLimits.maxRenderPixels * 1.0001));
+      // Keeps pdfrx's default preview cap (longest side <= 2000 px).
+      expect(capRenderScale(3000, 1000, 1) * 3000, closeTo(2000, 1e-6));
+    });
+
+    test('huge MediaBox (> 14400 pt) uses the real size: bitmap stays bounded', () {
+      for (final (w, h) in [(1e6, 1e6), (1e6, 10.0), (20000.0, 30000.0)]) {
+        final s = capRenderScale(w, h, 2);
+        expect(w * s * h * s, lessThanOrEqualTo(SecurityLimits.maxRenderPixels * 1.0001));
+        expect(w * s, lessThanOrEqualTo(2000.0001));
+        expect(h * s, lessThanOrEqualTo(2000.0001));
+      }
+      expect(capRenderScale(double.nan, 100, 2), lessThan(1));
+      expect(capRenderScale(0, 100, 2), lessThan(1));
+      expect(capRenderScale(100, double.infinity, 2), lessThan(1));
     });
 
     test('spread suggestion on tablets / landscape only', () {

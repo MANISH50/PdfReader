@@ -113,14 +113,23 @@ int snapTargetPage({required int current, required int pageCount, required doubl
   return target.clamp(1, pageCount);
 }
 
-/// Caps a page render scale so a single bitmap never exceeds
-/// [SecurityLimits.maxRenderPixels].
-double capRenderScale(double pageWidthPt, double pageHeightPt, double scale) {
-  final w = pageWidthPt.clamp(1.0, SecurityLimits.maxPageSidePt);
-  final h = pageHeightPt.clamp(1.0, SecurityLimits.maxPageSidePt);
-  final px = w * h * scale * scale;
-  if (px <= SecurityLimits.maxRenderPixels) return scale;
-  return math.sqrt(SecurityLimits.maxRenderPixels / (w * h));
+/// pdfrx's default one-pass preview size limit (PdfViewerParams.onePassRenderingSizeThreshold).
+const double kOnePassRenderingSizeThreshold = 2000;
+
+/// Render scale for a page of real size [pageWidthPt] x [pageHeightPt] points.
+/// Keeps pdfrx's default preview cap (longest side <= [sizeThreshold] px) and
+/// additionally never lets one bitmap exceed [SecurityLimits.maxRenderPixels].
+/// Uses the REAL page size (a huge MediaBox must not be clamped first).
+double capRenderScale(double pageWidthPt, double pageHeightPt, double scale,
+    {double sizeThreshold = kOnePassRenderingSizeThreshold}) {
+  final w = pageWidthPt, h = pageHeightPt;
+  if (!w.isFinite || !h.isFinite || w <= 0 || h <= 0) return 0.01;
+  var s = (scale.isFinite && scale > 0) ? scale : 1.0;
+  if (w > sizeThreshold || h > sizeThreshold) {
+    s = math.min(s, math.min(sizeThreshold / w, sizeThreshold / h));
+  }
+  final pixelCap = math.sqrt(SecurityLimits.maxRenderPixels / (w * h));
+  return math.min(s, pixelCap);
 }
 
 /// Suggest two-page spreads on tablets and landscape screens.

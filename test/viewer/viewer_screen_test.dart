@@ -76,7 +76,7 @@ void main() {
     await settle(tester);
     expect(find.text('Password required'), findsOneWidget);
     expect(find.text('Incorrect password. Try again.'), findsNothing);
-    await tester.enterText(find.byKey(const Key('passwordField')), 'hunter2');
+    await tester.enterText(find.byKey(const Key('password.field')), 'hunter2');
     await tester.tap(find.text('Open'));
     await settle(tester);
     expect(find.text('Incorrect password. Try again.'), findsOneWidget);
@@ -122,11 +122,11 @@ void main() {
     ));
     await tester.tap(find.text('go'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('goToPageField')), '40');
+    await tester.enterText(find.byKey(const Key('viewer.goToPage.field')), '40');
     await tester.tap(find.text('Go'));
     await tester.pumpAndSettle();
     expect(find.text('Enter a number from 1 to 12'), findsOneWidget);
-    await tester.enterText(find.byKey(const Key('goToPageField')), '7');
+    await tester.enterText(find.byKey(const Key('viewer.goToPage.field')), '7');
     await tester.tap(find.text('Go'));
     await tester.pumpAndSettle();
     expect(result, 7);
@@ -147,9 +147,25 @@ void main() {
     final real = DocumentRef(id: 'real', path: file.path, displayName: 'Real.pdf', sizeBytes: 1);
     await tester.pumpWidget(app(FakeService((_) async => pdf), document: real));
     await settle(tester);
-    expect(find.byKey(const Key('pageIndicator')), findsOneWidget);
+    expect(find.byKey(const Key('viewer.pageIndicator')), findsOneWidget);
     expect(find.text('1 / 3'), findsOneWidget);
     expect(find.byType(PdfViewer), findsOneWidget);
+
+    expect(find.byKey(const Key('viewer.scroll')), findsOneWidget);
+    expect(find.byKey(const Key('viewer.page.1')), findsOneWidget);
+    expect(find.byKey(const Key('viewer.screen')), findsOneWidget);
+
+    // Search: hit count uses the QA key and "i of n" format.
+    await tester.tap(find.byKey(const Key('viewer.search')));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('viewer.search.field')), 'Two');
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    }
+    expect(tester.widget<Text>(find.byKey(const Key('viewer.search.count'))).data, '1 of 1');
+    await tester.tap(find.byTooltip('Close search'));
+    await settle(tester);
 
     // Bookmark current page.
     await tester.tap(find.byTooltip('Bookmark this page'));
