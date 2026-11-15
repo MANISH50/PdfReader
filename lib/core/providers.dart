@@ -5,6 +5,7 @@ import 'export/exporter.dart';
 import 'models/app_settings.dart';
 import 'pdf/document_service.dart';
 import 'pdf/page_editor.dart';
+import 'pdf/pdfrx_document_service.dart';
 import 'storage/app_storage.dart';
 import 'storage/stores.dart';
 
@@ -20,8 +21,7 @@ final annotationStoreProvider =
 
 // ---- Implementations supplied by feature agents (one line each) ----------
 // Viewer agent:
-final documentServiceProvider =
-    Provider<DocumentService>((ref) => throw UnimplementedError('Viewer agent'));
+final documentServiceProvider = Provider<DocumentService>((ref) => PdfrxDocumentService());
 // Editing agent:
 final pageEditorProvider = Provider<PageEditor>((ref) => throw UnimplementedError('Editing agent'));
 final saveServiceProvider = Provider<SaveService>((ref) => throw UnimplementedError('Editing agent'));
