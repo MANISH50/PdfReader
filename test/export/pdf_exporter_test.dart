@@ -97,9 +97,19 @@ void main() {
     await expectLater(
       PdfExporter(temp, () => throw UnimplementedError())
           .export(doc, const ExportOptions(format: ExportFormat.pdf), baseName: 'x'),
-      throwsA(isA<ExportFailure>()),
+      throwsA(isA<ExportFailure>().having((e) => e.userMessage, 'message', PdfExporter.editorUnavailable)),
     );
     expect(temp.dir.listSync(recursive: true), isEmpty);
+  });
+
+  test('flatten failure explains how to export without annotations', () async {
+    final temp = newTemp();
+    addTearDown(() => temp.dir.deleteSync(recursive: true));
+    await expectLater(
+      PdfExporter(temp, _ThrowingFlatten.new)
+          .export(doc, const ExportOptions(format: ExportFormat.pdf), baseName: 'x', annotations: [fakeAnnotation()]),
+      throwsA(isA<ExportFailure>().having((e) => e.userMessage, 'message', PdfExporter.flattenFailed)),
+    );
   });
 
   test('cancellation', () async {
@@ -112,4 +122,9 @@ void main() {
     );
     expect(temp.dir.listSync(recursive: true), isEmpty);
   });
+}
+
+class _ThrowingFlatten extends FakePageEditor {
+  @override
+  Future<List<int>> flatten(PdfDocument source, List<Annotation> annotations) => throw StateError('boom');
 }

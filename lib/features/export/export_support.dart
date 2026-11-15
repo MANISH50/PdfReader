@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
 
+import '../../core/models/export_job.dart';
 import '../../core/security/limits.dart';
 import '../../core/storage/app_storage.dart';
 
@@ -24,6 +25,20 @@ class ExportFailure implements Exception {
   @override
   String toString() => 'ExportFailure($userMessage${cause == null ? '' : ', $cause'})';
 }
+
+/// An [ExportResult] with notes for the user about partial fidelity, e.g.
+/// annotations that could not be applied or page images left out.
+class ExportOutcome extends ExportResult {
+  const ExportOutcome(super.files, {this.notices = const []});
+  final List<String> notices;
+}
+
+/// Notices attached to [result], if any.
+List<String> noticesOf(ExportResult result) => result is ExportOutcome ? result.notices : const [];
+
+/// True for bidi embedding/override/isolate controls (U+202A–U+202E,
+/// U+2066–U+2069), which can disguise text and are stripped from output.
+bool isBidiControl(int c) => (c >= 0x202A && c <= 0x202E) || (c >= 0x2066 && c <= 0x2069);
 
 /// Throws [ExportCancelledException] when [isCancelled] reports true.
 void throwIfCancelled(bool Function()? isCancelled) {
@@ -136,7 +151,6 @@ Future<PdfPage?> loadedPage(PdfDocument doc, int pageNumber) async {
 Future<PdfImage> renderPage(
   PdfPage page,
   RenderSize size, {
-  bool withAnnotations = true,
   bool Function()? isCancelled,
 }) async {
   final token = page.createCancellationToken();
@@ -151,8 +165,9 @@ Future<PdfImage> renderPage(
           fullWidth: size.width.toDouble(),
           fullHeight: size.height.toDouble(),
           backgroundColor: 0xFFFFFFFF,
-          annotationRenderingMode:
-              withAnnotations ? PdfAnnotationRenderingMode.annotationAndForms : PdfAnnotationRenderingMode.none,
+          // The document's own annotations and form-field appearances are
+          // page content; "Include annotations" only concerns app annotations.
+          annotationRenderingMode: PdfAnnotationRenderingMode.annotationAndForms,
           cancellationToken: token,
         )
         .timeout(SecurityLimits.pageRenderTimeout, onTimeout: () {

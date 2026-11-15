@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart' show PdfPageFormat;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdfreader/core/models/export_job.dart';
+import 'package:pdfreader/features/export/docx/char_style_probe.dart';
 import 'package:pdfreader/features/export/docx/docx_writer.dart';
 import 'package:pdfreader/features/export/docx/layout.dart';
 import 'package:pdfreader/features/export/docx_exporter.dart';
@@ -18,6 +19,18 @@ import 'test_pdfs.dart';
 const _w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
 /// Unzips a DOCX, checks the package structure and parses every XML part.
+/// Writes [parts] with the streaming writer and returns the zip bytes.
+List<int> zipParts(DocxParts parts) {
+  final dir = Directory.systemTemp.createTempSync('docx_');
+  try {
+    final path = '${dir.path}/out.docx';
+    DocxWriter.writeZip(parts, path);
+    return File(path).readAsBytesSync();
+  } finally {
+    dir.deleteSync(recursive: true);
+  }
+}
+
 Map<String, XmlDocument> validateDocx(List<int> bytes) {
   final archive = ZipDecoder().decodeBytes(bytes);
   final names = archive.files.map((f) => f.name).toSet();
@@ -86,7 +99,7 @@ void main() {
         DocxPage(widthPt: 595, heightPt: 842, paragraphs: [para('שלום עולם', rtl: true), para('नमस्ते')]),
       ];
       final parts = DocxWriter(title: 'T & T', created: DateTime.utc(2026)).buildParts(pages, 11);
-      final xml = validateDocx(DocxWriter.zip(parts));
+      final xml = validateDocx(zipParts(parts));
       final doc = xml['word/document.xml']!;
       final ps = paragraphs(doc);
       expect(paraStyle(ps[0]), 'Heading1');
@@ -108,29 +121,34 @@ void main() {
     });
 
     test('embeds images with content type and relationship', () {
-      final jpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xD9]);
+      final dir = Directory.systemTemp.createTempSync('docx_img_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final jpeg = File('${dir.path}/a.jpeg')..writeAsBytesSync(Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xD9]));
       final parts = DocxWriter(title: 'x').buildParts([
         DocxPage(
           widthPt: 842,
           heightPt: 595,
           paragraphs: const [],
-          image: DocxImage(jpeg, pixelWidth: 200, pixelHeight: 100),
+          image: DocxImage(jpeg.path, pixelWidth: 200, pixelHeight: 100),
         ),
       ], 0);
-      final xml = validateDocx(DocxWriter.zip(parts));
-      expect(parts.keys, contains('word/media/image1.jpeg'));
+      final bytes = zipParts(parts);
+      final xml = validateDocx(bytes);
+      final media = ZipDecoder().decodeBytes(bytes).findFile('word/media/image1.jpeg')!;
+      expect(media.content, [0xFF, 0xD8, 0xFF, 0xD9]);
       final defaults = xml['[Content_Types].xml']!.findAllElements('Default').map((d) => d.getAttribute('Extension'));
       expect(defaults, contains('jpeg'));
       expect(xml['word/document.xml']!.findAllElements('w:pgSz').single.getAttribute('w:orient'), 'landscape');
     });
 
     test('empty document is still valid', () {
-      validateDocx(DocxWriter.zip(DocxWriter(title: '').buildParts(const [], 0)));
+      validateDocx(zipParts(DocxWriter(title: '').buildParts(const [], 0)));
     });
 
     test('xmlEscape drops invalid XML characters and lone surrogates', () {
       expect(xmlEscape('a\u0000b￾c\uD800d😀'), 'abcd😀');
       expect(xmlEscape('<&>"'), '&lt;&amp;&gt;&quot;');
+      expect(xmlEscape('a\u202Eb\u2066c\u2069'), 'abc');
     });
   });
 
@@ -180,7 +198,7 @@ void main() {
       addTearDown(() => temp.dir.deleteSync(recursive: true));
       final doc = await openBytes(await buildSamplePdf(pages: 1));
       addTearDown(doc.dispose);
-      final r = await DocxExporter(temp, probeStyles: null, embedImagesForScans: false)
+      final r = await DocxExporter(temp, probe: null, embedImagesForScans: false)
           .export(doc, const ExportOptions(format: ExportFormat.docx), baseName: 'x');
       final ps = paragraphs(validateDocx(File(r.files.single).readAsBytesSync())['word/document.xml']!);
       expect(paraStyle(ps.firstWhere((p) => paraText(p) == 'Chapter 1 Title')), 'Heading1');
@@ -210,6 +228,49 @@ void main() {
       final english = ps.firstWhere((p) => paraText(p).contains('Hello'));
       expect(english.findAllElements('w:bidi'), isEmpty);
     }, skip: File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf').existsSync() ? false : 'DejaVuSans not installed');
+
+    test('blank page gets no picture; image cap adds a placeholder and a notice', () async {
+      final temp = newTemp();
+      addTearDown(() => temp.dir.deleteSync(recursive: true));
+      final blank = await openBytes(await buildSamplePdf(pages: 3, blankPage: true));
+      addTearDown(blank.dispose);
+      final r1 = await DocxExporter(temp).export(blank, const ExportOptions(format: ExportFormat.docx), baseName: 'b');
+      final a1 = ZipDecoder().decodeBytes(File(r1.files.single).readAsBytesSync());
+      expect(a1.files.where((f) => f.name.startsWith('word/media/')), isEmpty);
+      expect(noticesOf(r1), isEmpty);
+
+      final scan = await openBytes(await buildSamplePdf(pages: 3));
+      addTearDown(scan.dispose);
+      final r2 = await DocxExporter(temp, maxEmbeddedImages: 0)
+          .export(scan, const ExportOptions(format: ExportFormat.docx), baseName: 's');
+      expect(noticesOf(r2), [DocxExporter.imageCapNotice(0)]);
+      final texts = paragraphs(validateDocx(File(r2.files.single).readAsBytesSync())['word/document.xml']!).map(paraText);
+      expect(texts, contains(DocxExporter.imageCapPlaceholder(3)));
+      // Only the .docx remains in the export directory (page images were temporary).
+      expect(File(r2.files.single).parent.listSync().map((e) => e.path), [r2.files.single]);
+    });
+
+    test('PDFium page probe on a real PDF (runs on pdfrx worker)', () async {
+      final doc = await openBytes(await buildSamplePdf(pages: 3));
+      addTearDown(doc.dispose);
+      final raw = (await loadRawPageText(doc.pages[0]))!;
+      final probe = (await pdfiumPageProbe(doc, 1, raw.text))!;
+      expect(probe.hasGraphics, isFalse);
+      final styles = probe.styles!;
+      expect(styles, hasLength(raw.text.length));
+      final h = raw.text.indexOf('Chapter');
+      expect(styles[h]!.bold, isTrue);
+      expect(styles[h]!.fontSize, closeTo(26, 0.5));
+      final e = raw.text.indexOf('Emphasised');
+      expect(styles[e]!.italic, isTrue);
+      expect(styles[e]!.bold, isFalse);
+      // Image-only page.
+      final p3 = (await pdfiumPageProbe(doc, 3, ''))!;
+      expect(p3.hasGraphics, isTrue);
+      // Mismatched text or too many characters: no styles, no crash.
+      expect((await pdfiumPageProbe(doc, 1, 'nope'))!.styles, isNull);
+      expect((await pdfiumPageProbe(doc, 1, 'x' * (maxStyledCharsPerPage + 1)))!.styles, isNull);
+    });
 
     test('cancellation cleans up', () async {
       final temp = newTemp();

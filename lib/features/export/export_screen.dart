@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoDialogAction;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
@@ -13,7 +14,7 @@ import '../../core/models/document_ref.dart';
 import '../../core/models/export_job.dart';
 import '../../core/providers.dart';
 import '../../ui/design_system/adaptive.dart';
-import '../../ui/design_system/tokens.dart';
+import '../../ui/design_system/tokens.dart' show Space, kMinTouchTarget;
 import 'export_support.dart';
 import 'exporters.dart';
 import 'page_range.dart';
@@ -69,6 +70,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
   String? _message;
   final _ownedFiles = <String>{};
   late final String _tempDir;
+  Future<void>? _running;
 
   @override
   void initState() {
@@ -82,8 +84,19 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
   void dispose() {
     _rangeCtrl.dispose();
     _cancelRequested = true;
-    unawaited(_doc?.dispose());
-    _cleanup();
+    final doc = _doc;
+    void finish() {
+      unawaited(doc?.dispose());
+      _cleanup();
+    }
+
+    // Never dispose the document under a running export; clean up after it.
+    final running = _running;
+    if (running == null) {
+      finish();
+    } else {
+      unawaited(running.whenComplete(finish));
+    }
     super.dispose();
   }
 
@@ -126,6 +139,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         builder: (c) => AlertDialog(
           title: Text(retry ? 'Wrong password' : 'Password required'),
           content: TextField(
+            key: const Key('password.field'),
             controller: ctrl,
             obscureText: true,
             autofocus: true,
@@ -134,7 +148,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(c, ctrl.text), child: const Text('Open')),
+            FilledButton(
+                key: const Key('password.ok'),
+                onPressed: () => Navigator.pop(c, ctrl.text),
+                child: const Text('Open')),
           ],
         ),
       );
@@ -167,18 +184,40 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     return true;
   }
 
-  Future<void> _export() async {
+  Future<bool> _confirmLossy() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog.adaptive(
+        title: const Text('Before you convert'),
+        content: const Text(kLossyExportWarning),
+        actions: [
+          adaptiveDialogAction(c, label: 'Cancel', onPressed: () => Navigator.pop(c, false)),
+          adaptiveDialogAction(c,
+              key: const Key('export.confirmLossy'),
+              label: 'Convert',
+              isDefault: true,
+              onPressed: () => Navigator.pop(c, true)),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<void> _startExport() async {
     final doc = _doc;
     if (doc == null || !_canExport) return;
-    if (_format.isLossyLayout) {
-      final ok = await showAdaptiveConfirm(
-        context,
-        title: 'Before you convert',
-        message: kLossyExportWarning,
-        confirmLabel: 'Convert',
-      );
-      if (ok != true || !mounted) return;
+    if (_format.isLossyLayout && !(await _confirmLossy())) return;
+    if (!mounted) return;
+    final run = _export(doc);
+    _running = run;
+    try {
+      await run;
+    } finally {
+      if (identical(_running, run)) _running = null;
     }
+  }
+
+  Future<void> _export(PdfDocument doc) async {
     _cleanup();
     final exporter = exporterFor(ref.read(exportersProvider), _format);
     if (exporter == null) {
@@ -215,8 +254,12 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         },
         isCancelled: () => _cancelRequested,
       );
+      // Registered before the mounted check so dispose's cleanup removes them.
       _ownedFiles.addAll(result.files);
       if (!mounted) return;
+      for (final n in noticesOf(result)) {
+        _snack(n);
+      }
       setState(() {
         _result = result;
         _phase = _Phase.done;
@@ -337,6 +380,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         Wrap(spacing: Space.sm, runSpacing: Space.sm, children: [
           for (final f in ExportFormat.values)
             ChoiceChip(
+              key: Key('export.format.${f.extension}'),
               label: Text(_formatLabel(f)),
               selected: _format == f,
               onSelected: running ? null : (_) => setState(() => _format = f),
@@ -451,8 +495,9 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           ),
         ] else
           FilledButton.icon(
+            key: const Key('export.start'),
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(kMinTouchTarget)),
-            onPressed: _canExport ? _export : null,
+            onPressed: _canExport ? _startExport : null,
             icon: const Icon(Icons.file_download_outlined),
             label: Text('Export as ${_formatLabel(_format)}'),
           ),
@@ -473,12 +518,16 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     });
     return [
       const SizedBox(height: Space.lg),
-      Text(files.length == 1 ? p.basename(files.single) : '${files.length} files', style: t.titleMedium),
+      Text(files.length == 1 ? p.basename(files.single) : '${files.length} files',
+          key: const Key('export.done'), style: t.titleMedium),
+      for (final n in noticesOf(_result!))
+        Padding(padding: const EdgeInsets.only(top: Space.xs), child: Text(n, style: t.bodySmall)),
       Text(_formatBytes(bytes), style: t.bodySmall),
       const SizedBox(height: Space.md),
       Row(children: [
         Expanded(
           child: FilledButton.tonalIcon(
+            key: const Key('export.share'),
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(kMinTouchTarget)),
             onPressed: _share,
             icon: Icon(Icons.adaptive.share),
@@ -515,13 +564,26 @@ String _formatBytes(int b) {
   return '${(b / (1024 * 1024)).toStringAsFixed(1)} MB';
 }
 
-/// Bundles [files] into a zip at [dest] (stored, since images are already
-/// compressed), on a background isolate.
+/// Bundles [files] into a zip at [dest] on a background isolate, streaming
+/// one file at a time from disk (stored: images are already compressed).
 Future<void> zipFiles(List<String> files, String dest) => Isolate.run(() {
-      final archive = Archive();
-      for (final f in files) {
-        final data = File(f).readAsBytesSync();
-        archive.addFile(ArchiveFile.noCompress(p.basename(f), data.length, data));
+      final enc = ZipFileEncoder()..create(dest, level: ZipFileEncoder.store);
+      try {
+        for (final f in files) {
+          enc.addFileSync(File(f), p.basename(f), ZipFileEncoder.store);
+        }
+      } finally {
+        enc.closeSync();
       }
-      File(dest).writeAsBytesSync(ZipEncoder().encodeBytes(archive), flush: true);
     });
+
+/// A dialog action that is Cupertino-styled on Apple platforms.
+Widget adaptiveDialogAction(BuildContext context,
+    {Key? key, required String label, required VoidCallback onPressed, bool isDefault = false}) {
+  if (isCupertino(context)) {
+    return CupertinoDialogAction(key: key, isDefaultAction: isDefault, onPressed: onPressed, child: Text(label));
+  }
+  return isDefault
+      ? FilledButton(key: key, onPressed: onPressed, child: Text(label))
+      : TextButton(key: key, onPressed: onPressed, child: Text(label));
+}

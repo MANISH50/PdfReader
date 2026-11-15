@@ -103,7 +103,7 @@ void main() {
     expect(find.text('All pages (4)'), findsOneWidget);
     expect(find.text('Current page (2)'), findsOneWidget);
 
-    await tester.tap(find.text('Word (DOCX)'));
+    await tester.tap(find.byKey(const Key('export.format.docx')));
     await tester.pump();
     expect(find.text(kLossyExportWarning), findsOneWidget);
 
@@ -121,7 +121,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Before you convert'), findsOneWidget);
     expect(find.text(kLossyExportWarning), findsNWidgets(2));
-    await tester.tap(find.text('Convert'));
+    await tester.tap(find.byKey(const Key('export.confirmLossy')));
     await tester.pumpAndSettle();
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
     await tester.pumpAndSettle();
@@ -129,6 +129,7 @@ void main() {
     expect(exporter.last!.format, ExportFormat.docx);
     expect(exporter.last!.pages, [2, 3]);
     expect(find.text('Report.docx'), findsOneWidget);
+    expect(find.byKey(const Key('export.done')), findsOneWidget);
 
     await tester.ensureVisible(find.text('Save to…'));
     await tester.pumpAndSettle();

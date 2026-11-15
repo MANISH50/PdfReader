@@ -41,13 +41,23 @@ class PdfExporter implements Exporter {
       final pageCount = doc.pages.length;
       final pages = resolvePages(options.pages, pageCount);
       if (pages.isEmpty) throw const ExportFailure('No pages to export.');
-      final pe = editor();
+      final PageEditor pe;
+      try {
+        pe = editor();
+      } catch (e) {
+        throw ExportFailure(editorUnavailable, e);
+      }
       onProgress?.call(0, 2);
       final flatten = options.includeAnnotations && annotations.isNotEmpty;
       final List<int> bytes;
       if (flatten) {
         final selected = pages.toSet();
-        final full = await pe.flatten(doc, [for (final a in annotations) if (selected.contains(a.page)) a]);
+        final List<int> full;
+        try {
+          full = await pe.flatten(doc, [for (final a in annotations) if (selected.contains(a.page)) a]);
+        } catch (e) {
+          throw ExportFailure(flattenFailed, e);
+        }
         throwIfCancelled(isCancelled);
         onProgress?.call(1, 2);
         if (_isAll(pages, pageCount)) {
@@ -76,6 +86,10 @@ class PdfExporter implements Exporter {
       await flattened?.dispose();
     }
   }
+
+  static const editorUnavailable = "PDF export isn't available right now. Try PNG, JPG, TXT or DOCX instead.";
+  static const flattenFailed =
+      "Your annotations couldn't be added to the PDF. Turn off \"Include annotations\" to export without them.";
 
   static bool _isAll(List<int> pages, int count) {
     if (pages.length != count) return false;

@@ -50,15 +50,15 @@ class ImageExporter implements Exporter {
       final pages = resolvePages(options.pages, doc.pages.length);
       if (pages.isEmpty) throw const ExportFailure('No pages to export.');
       var source = doc;
-      if (options.includeAnnotations && annotations.isNotEmpty && flatten != null) {
-        final List<int> bytes;
-        try {
-          bytes = await flatten!(doc, annotations);
-        } catch (e) {
-          throw ExportFailure('Your annotations could not be applied.', e);
-        }
+      final notices = <String>[];
+      if (options.includeAnnotations && annotations.isNotEmpty) {
+        final flattenedBytes = await _tryFlatten(doc, annotations);
         throwIfCancelled(isCancelled);
-        flattened = source = await open(Uint8List.fromList(bytes));
+        if (flattenedBytes == null) {
+          notices.add(annotationsSkippedNotice);
+        } else {
+          flattened = source = await open(Uint8List.fromList(flattenedBytes));
+        }
       }
       final files = <String>[];
       onProgress?.call(0, pages.length);
@@ -68,8 +68,7 @@ class ImageExporter implements Exporter {
         final page = await loadedPage(source, n);
         if (page == null) throw ExportFailure('Page $n could not be loaded.');
         final size = RenderSize.compute(page.width, page.height, options.dpi);
-        final image = await renderPage(page, size,
-            withAnnotations: options.includeAnnotations, isCancelled: isCancelled);
+        final image = await renderPage(page, size, isCancelled: isCancelled);
         final TransferableTypedData pixels;
         final int w = image.width, h = image.height;
         try {
@@ -84,13 +83,29 @@ class ImageExporter implements Exporter {
         files.add(path);
         onProgress?.call(i + 1, pages.length);
       }
-      return ExportResult(files);
+      return ExportOutcome(files, notices: notices);
     } catch (e) {
       await out.discard();
       if (e is ExportCancelledException || e is ExportFailure) rethrow;
       throw ExportFailure('The pages could not be converted to images.', e);
     } finally {
       await flattened?.dispose();
+    }
+  }
+
+  static const annotationsSkippedNotice =
+      "Your annotations couldn't be added, so the images show the pages without them.";
+
+  /// Flattened PDF bytes, or null when annotations can't be applied (editor
+  /// unavailable or failing); the export then continues without them.
+  Future<List<int>?> _tryFlatten(PdfDocument doc, List<Annotation> annotations) async {
+    final f = flatten;
+    if (f == null) return null;
+    try {
+      final bytes = await f(doc, annotations);
+      return bytes.length >= 5 && String.fromCharCodes(bytes.take(5)) == '%PDF-' ? bytes : null;
+    } catch (_) {
+      return null;
     }
   }
 

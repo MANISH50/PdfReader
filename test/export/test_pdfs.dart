@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' show Color, Offset;
 
+import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart' show PdfPageFormat;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdfreader/core/models/annotation.dart';
@@ -19,16 +20,18 @@ Future<void> initEngine() async {
 }
 
 /// A multi-page document with a heading, body paragraphs, bold/italic text
-/// and different font sizes. Page 3 is intentionally blank (like a scan).
-Future<Uint8List> buildSamplePdf({int pages = 3, PdfPageFormat format = PdfPageFormat.a4}) async {
+/// and different font sizes. Page 3 holds only a picture (like a scan);
+/// with [blankPage] set, that page has no content at all.
+Future<Uint8List> buildSamplePdf({int pages = 3, PdfPageFormat format = PdfPageFormat.a4, bool blankPage = false}) async {
   final d = pw.Document();
+  final picture = pw.MemoryImage(img.encodePng(img.Image(width: 64, height: 48)..clear(img.ColorRgb8(200, 30, 30))));
   const body = 'The quick brown fox jumps over the lazy dog while the export pipeline turns this '
       'paragraph into Word text with sensible line joining and wrapping across several lines.';
   for (var i = 1; i <= pages; i++) {
     d.addPage(pw.Page(
       pageFormat: format,
       build: (c) => i == 3
-          ? pw.SizedBox()
+          ? (blankPage ? pw.SizedBox() : pw.Image(picture, width: 300))
           : pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
               pw.Text('Chapter $i Title', style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 14),

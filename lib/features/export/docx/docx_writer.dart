@@ -1,15 +1,16 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 
 import 'layout.dart';
 
-/// A page image (e.g. a scanned page) embedded as JPEG.
+/// A page image (e.g. a scanned page): a JPEG file on disk, streamed into
+/// the package so images never pile up in memory.
 class DocxImage {
-  const DocxImage(this.jpeg, {required this.pixelWidth, required this.pixelHeight});
-  final Uint8List jpeg;
+  const DocxImage(this.path, {required this.pixelWidth, required this.pixelHeight});
+  final String path;
   final int pixelWidth;
   final int pixelHeight;
 }
@@ -37,9 +38,9 @@ class DocxWriter {
   static const _r = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
   static const _marginTwips = 1080; // 0.75 inch
 
-  /// Builds all package parts (path -> bytes).
-  Map<String, List<int>> buildParts(List<DocxPage> pages, double bodySizePt) {
-    final media = <String, Uint8List>{};
+  /// Builds all package parts.
+  DocxParts buildParts(List<DocxPage> pages, double bodySizePt) {
+    final media = <String, String>{};
     final rels = <String>[];
     final body = StringBuffer();
     final first = pages.isEmpty ? null : pages.first;
@@ -54,7 +55,7 @@ class DocxWriter {
       if (image != null) {
         final id = media.length + 1;
         final name = 'image$id.jpeg';
-        media[name] = image.jpeg;
+        media[name] = image.path;
         final rId = 'rIdImg$id';
         rels.add('<Relationship Id="$rId" Type="$_r/image" Target="media/$name"/>');
         body.write(_imageParagraph(rId, id, image, contentWEmu, contentHEmu));
@@ -84,7 +85,7 @@ class DocxWriter {
         '<Relationship Id="rIdSettings" Type="$_r/settings" Target="settings.xml"/>'
         '${rels.join()}</Relationships>';
 
-    return {
+    return DocxParts({
       '[Content_Types].xml': _utf8(_contentTypes(media.isNotEmpty)),
       '_rels/.rels': _utf8(_rootRels),
       'docProps/core.xml': _utf8(_core()),
@@ -93,22 +94,25 @@ class DocxWriter {
       'word/styles.xml': _utf8(_styles(bodySizePt)),
       'word/settings.xml': _utf8(_settings),
       'word/_rels/document.xml.rels': _utf8(docRels),
-      for (final e in media.entries) 'word/media/${e.key}': e.value,
-    };
+    }, {for (final e in media.entries) 'word/media/${e.key}': e.value});
   }
 
-  /// Zips the parts. Images are stored (already compressed), XML deflated.
-  static Uint8List zip(Map<String, List<int>> parts) {
-    final archive = Archive();
-    // [Content_Types].xml first, by convention.
-    final names = parts.keys.toList()..sort((a, b) => a.startsWith('[') ? -1 : (b.startsWith('[') ? 1 : 0));
-    for (final name in names) {
-      final data = parts[name]!;
-      archive.addFile(name.endsWith('.jpeg')
-          ? ArchiveFile.noCompress(name, data.length, data)
-          : ArchiveFile.bytes(name, data));
+  /// Streams the package to [outPath]: XML parts deflated, JPEGs stored and
+  /// copied from disk one at a time. Synchronous; call off the UI isolate.
+  static void writeZip(DocxParts parts, String outPath) {
+    final enc = ZipFileEncoder()..create(outPath);
+    try {
+      // [Content_Types].xml first, by convention.
+      final names = parts.xml.keys.toList()..sort((a, b) => a.startsWith('[') ? -1 : (b.startsWith('[') ? 1 : 0));
+      for (final name in names) {
+        enc.addArchiveFile(ArchiveFile.bytes(name, parts.xml[name]!));
+      }
+      for (final e in parts.media.entries) {
+        enc.addFileSync(File(e.value), e.key, ZipFileEncoder.store);
+      }
+    } finally {
+      enc.closeSync();
     }
-    return ZipEncoder().encodeBytes(archive);
   }
 
   static double _clampPt(double v) => v.isFinite ? v.clamp(144, 1584) : 612; // 2in..22in (Word limit)
@@ -247,6 +251,13 @@ class DocxWriter {
   static List<int> _utf8(String s) => utf8.encode(s);
 }
 
+/// Package parts: XML (entry name -> bytes) and media (entry name -> file).
+class DocxParts {
+  const DocxParts(this.xml, this.media);
+  final Map<String, List<int>> xml;
+  final Map<String, String> media;
+}
+
 /// Escapes text for XML and drops characters XML 1.0 forbids (controls other
 /// than tab/newline, lone surrogates, U+FFFE/U+FFFF).
 String xmlEscape(String s) {
@@ -267,6 +278,8 @@ String xmlEscape(String s) {
     if (c >= 0xDC00 && c <= 0xDFFF) continue;
     if (c < 0x20 && c != 0x09 && c != 0x0A && c != 0x0D) continue;
     if (c == 0xFFFE || c == 0xFFFF) continue;
+    // Bidi embedding/override/isolate controls can disguise text.
+    if ((c >= 0x202A && c <= 0x202E) || (c >= 0x2066 && c <= 0x2069)) continue;
     switch (c) {
       case 0x26:
         b.write('&amp;');

@@ -99,7 +99,7 @@ class TextExporter implements Exporter {
   static String cleanText(String text) {
     var t = truncateUtf16(text, SecurityLimits.maxCharsPerPage);
     t = t.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-    t = t.replaceAll(RegExp(r'[\x00-\x08\x0B-\x1F\x7F\uFFFE\uFFFF]'), '');
+    t = t.replaceAll(RegExp(r'[\x00-\x08\x0B-\x1F\x7F\uFFFE\uFFFF\u202A-\u202E\u2066-\u2069]'), '');
     t = t.split('\n').map((l) => l.trimRight()).join('\n');
     return t.trim();
   }

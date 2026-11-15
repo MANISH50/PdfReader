@@ -161,11 +161,23 @@ List<TextParagraph> analyzePage(List<PageChar> chars) {
   final paragraphs = <TextParagraph>[];
   var group = <_Line>[];
   double? firstGap;
+  var blockLeft = 0.0, blockRight = 0.0; // running extent of [group]
 
   void flush() {
     if (group.isNotEmpty) paragraphs.add(_toParagraph(group));
     group = [];
     firstGap = null;
+  }
+
+  void add(_Line line) {
+    if (group.isEmpty) {
+      blockLeft = line.left;
+      blockRight = line.right;
+    } else {
+      blockLeft = math.min(blockLeft, line.left);
+      blockRight = math.max(blockRight, line.right);
+    }
+    group.add(line);
   }
 
   for (final line in lines) {
@@ -174,23 +186,24 @@ List<TextParagraph> analyzePage(List<PageChar> chars) {
       continue;
     }
     if (group.isEmpty) {
-      group.add(line);
+      add(line);
       continue;
     }
     final prev = group.last;
-    final (brk, gap) = _breaksBefore(prev, line, group, firstGap);
+    final (brk, gap) = _breaksBefore(prev, line, group.length, blockLeft, blockRight, firstGap);
     if (brk) {
       flush();
     } else if (gap != null) {
       firstGap ??= gap;
     }
-    group.add(line);
+    add(line);
   }
   flush();
   return paragraphs;
 }
 
-(bool, double?) _breaksBefore(_Line prev, _Line cur, List<_Line> group, double? firstGap) {
+(bool, double?) _breaksBefore(
+    _Line prev, _Line cur, int groupLength, double blockLeft, double blockRight, double? firstGap) {
   if (prev.rtl != cur.rtl) return (true, null);
   if (_listStart.hasMatch(cur.text)) return (true, null);
   if (!prev.hasGeometry || !cur.hasGeometry) return (false, null);
@@ -207,15 +220,13 @@ List<TextParagraph> analyzePage(List<PageChar> chars) {
   }
   // No horizontal overlap: separate columns or blocks.
   if (cur.left > prev.right || cur.right < prev.left) return (true, null);
-  final blockLeft = group.map((l) => l.left).reduce(math.min);
-  final blockRight = group.map((l) => l.right).reduce(math.max);
   if (!cur.rtl) {
     // New indented first line, or the previous line ended early.
-    if (cur.left > blockLeft + 1.0 * h && group.length > 1) return (true, null);
-    if (group.length > 1 && prev.right < blockRight - 4 * h) return (true, null);
+    if (cur.left > blockLeft + 1.0 * h && groupLength > 1) return (true, null);
+    if (groupLength > 1 && prev.right < blockRight - 4 * h) return (true, null);
   } else {
-    if (cur.right < blockRight - 1.0 * h && group.length > 1) return (true, null);
-    if (group.length > 1 && prev.left > blockLeft + 4 * h) return (true, null);
+    if (cur.right < blockRight - 1.0 * h && groupLength > 1) return (true, null);
+    if (groupLength > 1 && prev.left > blockLeft + 4 * h) return (true, null);
   }
   return (false, gap);
 }

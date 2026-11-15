@@ -118,6 +118,21 @@ void main() {
     expect(temp.dir.listSync(recursive: true).whereType<File>(), isEmpty);
   });
 
+  test('failing flatten falls back to plain rendering with a notice', () async {
+    final temp = newTemp();
+    addTearDown(() => temp.dir.deleteSync(recursive: true));
+    final doc = await openBytes(await buildSizedPdf(100, 50));
+    addTearDown(doc.dispose);
+    final r = await ImageExporter(temp, flatten: (d, a) async => throw UnimplementedError('Editing agent')).export(
+      doc,
+      const ExportOptions(format: ExportFormat.png, dpi: 72),
+      baseName: 'a',
+      annotations: [fakeAnnotation()],
+    );
+    expect(r.files, hasLength(1));
+    expect(noticesOf(r), [ImageExporter.annotationsSkippedNotice]);
+  });
+
   test('annotations are flattened through the injected flattener', () async {
     final temp = newTemp();
     addTearDown(() => temp.dir.deleteSync(recursive: true));
