@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PdfReader app icon (original artwork). Source of truth for the mark;
+     PNGs are rendered by tool/branding/render_icon.py with identical geometry
+     (also mirrored in lib/ui/design_system/widgets/app_logo.dart). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4A6AE6"/>
+      <stop offset="1" stop-color="#2A3FA6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+  <!-- document sheet with folded top-right corner -->
+  <path d="M298 182 H546 L678 314 V742 A44 44 0 0 1 634 786 H298 A44 44 0 0 1 254 742 V226 A44 44 0 0 1 298 182 Z" fill="#FFFFFF"/>
+  <path d="M546 182 V296 Q546 314 564 314 H678 Z" fill="#DCE3FB"/>
+  <!-- text lines -->
+  <g stroke="#C5CEF2" stroke-width="34" stroke-linecap="round">
+    <line x1="334" y1="340" x2="520" y2="340"/>
+    <line x1="334" y1="420" x2="598" y2="420"/>
+    <line x1="334" y1="500" x2="470" y2="500"/>
+  </g>
+  <!-- reading lens -->
+  <circle cx="554" cy="626" r="112" fill="#FFF4DE"/>
+  <line x1="648" y1="720" x2="744" y2="816" stroke="#FFB547" stroke-width="52" stroke-linecap="round"/>
+  <circle cx="554" cy="626" r="112" fill="none" stroke="#FFB547" stroke-width="40"/>
+</svg>
