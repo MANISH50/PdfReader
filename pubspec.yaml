@@ -103,3 +103,34 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# ---- App icon & splash (UI agent). Regenerate with:
+#   python3 tool/branding/render_icon.py
+#   dart run flutter_launcher_icons
+#   dart run flutter_native_splash:create
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path_android: "assets/branding/icon_android_legacy.png"
+  image_path_ios: "assets/branding/icon_ios.png"
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  adaptive_icon_background: "assets/branding/icon_background.png"
+  adaptive_icon_foreground: "assets/branding/icon_foreground.png"
+  adaptive_icon_monochrome: "assets/branding/icon_monochrome.png"
+
+flutter_native_splash:
+  color: "#F6F7FB"
+  color_dark: "#0F1115"
+  image: "assets/branding/splash.png"
+  android_12:
+    image: "assets/branding/splash_android12.png"
+    icon_background_color: "#3B5BDB"
+    color: "#F6F7FB"
+    image_dark: "assets/branding/splash_android12.png"
+    icon_background_color_dark: "#3B5BDB"
+    color_dark: "#0F1115"
+  android: true
+  ios: true
+  web: false
+  fullscreen: false

@@ -92,6 +92,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               message: 'Open a PDF from your device to start reading. '
                   'Everything stays on this device — no account, no cloud.',
               action: PrimaryButton(
+                key: const Key('home.open'),
                 label: 'Open PDF',
                 icon: Icons.file_open_outlined,
                 busy: _busy,
@@ -140,6 +141,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 key: ValueKey('card-${e.doc.id}'),
                 index: i,
                 child: DocumentCard(
+                  key: Key('home.recent.$i'),
                   data: e.tileData,
                   onTap: () => openInViewer(context, ref, e.doc),
                   trailing: _ItemMenu(entry: e, onRemove: () => _remove(e, all.indexOf(e))),
@@ -161,6 +163,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   background: const _DismissBackground(),
                   onDismissed: (_) => _remove(e, all.indexOf(e)),
                   child: DocumentTile(
+                    key: Key('home.recent.$i'),
                     data: e.tileData,
                     onTap: () => openInViewer(context, ref, e.doc),
                     trailing: _ItemMenu(entry: e, onRemove: () => _remove(e, all.indexOf(e))),
@@ -173,6 +176,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     return AppScaffold(
+      key: const Key('home.screen'),
       title: 'Library',
       maxContentWidth: wide ? 1200 : kMaxContentWidth,
       actions: [
@@ -182,6 +186,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onPressed: _busy ? null : _merge,
         ),
         IconButton(
+          key: const Key('home.settings'),
           tooltip: 'Settings',
           icon: Icon(isCupertino(context) ? CupertinoIcons.settings : Icons.settings_outlined),
           onPressed: () => context.push(Routes.settings),
@@ -193,6 +198,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           : Semantics(
               hint: 'Choose a PDF file from your device',
               child: FloatingActionButton.extended(
+                key: const Key('home.open'),
                 onPressed: _busy ? null : _openPdf,
                 tooltip: 'Open a PDF',
                 icon: _busy

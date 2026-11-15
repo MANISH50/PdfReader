@@ -98,9 +98,9 @@ class SettingsScreen extends ConsumerWidget {
                 selected: settings.themeMode,
                 onChanged: (v) => _change(ref, (s) => s.copyWith(themeMode: v)),
                 segments: const [
-                  Segment(AppThemeMode.system, 'System'),
-                  Segment(AppThemeMode.light, 'Light'),
-                  Segment(AppThemeMode.dark, 'Dark'),
+                  Segment(AppThemeMode.system, 'System', key: Key('settings.theme.system')),
+                  Segment(AppThemeMode.light, 'Light', key: Key('settings.theme.light')),
+                  Segment(AppThemeMode.dark, 'Dark', key: Key('settings.theme.dark')),
                 ],
               ),
             ),

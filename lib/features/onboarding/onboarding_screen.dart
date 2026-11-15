@@ -127,6 +127,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     PageDots(count: _count, index: _index),
                     const SizedBox(height: Space.md),
                     PrimaryButton(
+                      key: Key(_isLast ? 'onboarding.done' : 'onboarding.next'),
                       expand: true,
                       label: _isLast ? 'Get started' : 'Continue',
                       icon: _isLast ? Icons.check_rounded : null,

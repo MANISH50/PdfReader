@@ -70,10 +70,13 @@ class AdaptiveSwitch extends StatelessWidget {
 
 /// One option of an [AdaptiveSegmented] control.
 class Segment<T> {
-  const Segment(this.value, this.label, {this.icon});
+  const Segment(this.value, this.label, {this.icon, this.key});
   final T value;
   final String label;
   final IconData? icon;
+
+  /// Attached to the segment's label (e.g. for integration tests).
+  final Key? key;
 }
 
 /// Single-choice segmented control: Material [SegmentedButton] or
@@ -96,6 +99,7 @@ class AdaptiveSegmented<T extends Object> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget label(Segment<T> s) => FittedBox(
+          key: s.key,
           fit: BoxFit.scaleDown,
           child: Text(s.label, maxLines: 1, softWrap: false),
         );

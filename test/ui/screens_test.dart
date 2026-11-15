@@ -247,4 +247,34 @@ void main() {
       });
     }
   });
+
+  group('QA integration-test keys', () {
+    testWidgets('home, onboarding and settings expose the agreed keys', (tester) async {
+      final h = Harness();
+      await h.pump(tester, Routes.home);
+      expect(find.byKey(const Key('home.screen')), findsOneWidget);
+      expect(find.byKey(const Key('home.open')), findsOneWidget);
+      expect(find.byKey(const Key('home.settings')), findsOneWidget);
+
+      seedRecents(h.store, [doc('A.pdf'), doc('B.pdf')]);
+      await h.pump(tester, Routes.home);
+      expect(find.byKey(const Key('home.recent.0')), findsOneWidget);
+      expect(find.byKey(const Key('home.recent.1')), findsOneWidget);
+      expect(find.byKey(const Key('home.open')), findsOneWidget); // FAB
+
+      await h.pump(tester, Routes.onboarding);
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(const Key('onboarding.next')));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byKey(const Key('onboarding.done')), findsOneWidget);
+
+      await h.pump(tester, Routes.settings);
+      await tester.tap(find.byKey(const Key('settings.theme.dark')));
+      await tester.pumpAndSettle();
+      expect(AppSettings.fromJson(h.store.data['settings']! as Map<String, Object?>).themeMode, AppThemeMode.dark);
+      expect(find.byKey(const Key('settings.theme.light')), findsOneWidget);
+      expect(find.byKey(const Key('settings.theme.system')), findsOneWidget);
+    });
+  });
 }
