@@ -1,5 +1,4 @@
 import 'package:go_router/go_router.dart';
-import 'package:material_ui/material_ui.dart';
 
 import 'core/models/document_ref.dart';
 import 'features/editor/organize_screen.dart';
@@ -38,5 +37,21 @@ GoRouter buildRouter({required bool showOnboarding}) => GoRouter(
           builder: (_, s) => ExportScreen(document: s.extra! as DocumentRef),
         ),
       ],
-      errorBuilder: (_, _) => const Scaffold(body: Center(child: Text('Page not found'))),
+      // Never show an error page: unknown locations (e.g. a content:// URI the
+      // OS hands over when PdfReader is the default PDF app) and document
+      // routes without a document go to Home. Incoming files are opened by
+      // IncomingFileListener, not by URL routing.
+      redirect: (_, s) => routeRedirect(s.uri.path, s.extra, showOnboarding: showOnboarding),
+      errorBuilder: (_, _) => const HomeScreen(),
     );
+
+const _docRoutes = {Routes.viewer, Routes.organize, Routes.export};
+const _knownRoutes = {Routes.home, Routes.onboarding, Routes.settings, ..._docRoutes};
+
+/// Returns where to go instead, or null to allow [path].
+String? routeRedirect(String path, Object? extra, {bool showOnboarding = false}) {
+  final fallback = showOnboarding ? Routes.onboarding : Routes.home;
+  if (!_knownRoutes.contains(path)) return fallback;
+  if (_docRoutes.contains(path) && extra is! DocumentRef) return fallback;
+  return null;
+}

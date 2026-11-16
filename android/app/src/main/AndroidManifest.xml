@@ -43,6 +43,10 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Files from "Open with" are handled by IncomingFilesHandler.
+                 Stop Flutter from also treating the file's content:// URI as
+                 an app route (which showed "Page not found"). -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

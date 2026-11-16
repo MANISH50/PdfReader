@@ -43,6 +43,8 @@
 	     private, non-backed-up inbox. We never hold long-lived security-scoped
 	     access to other apps' files, never write back to them, and keep the
 	     Documents folder hidden from the Files app. -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
 	<key>UISupportsDocumentBrowser</key>
