@@ -26,6 +26,10 @@ abstract interface class ShareService {
 abstract interface class FilePickService {
   Future<List<String>> pickPdfs({bool multiple = false});
 
+  /// Picks one document of any supported kind (PDF, DOCX, Markdown, text).
+  /// The file is sniffed on import; unsupported files are refused there.
+  Future<List<String>> pickDocuments();
+
   /// Lets the user choose where to save (SAF create document / iOS export).
   /// Returns the destination description, or null if cancelled.
   Future<String?> saveAs(String sourcePath, {required String suggestedName});

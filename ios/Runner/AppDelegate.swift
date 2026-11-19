@@ -18,7 +18,7 @@ import UIKit
   }
 }
 
-/// Receives PDFs from "Open in…" / share ("Copy to PdfReader") and Files.
+/// Receives PDFs (and Word / Markdown / text files for the reader) from "Open in…" / share ("Copy to PdfReader") and Files.
 ///
 /// Info.plist sets LSSupportsOpeningDocumentsInPlace = NO, so iOS hands us a
 /// copy (in Documents/Inbox) or a security-scoped URL. Either way we copy the
@@ -206,15 +206,20 @@ final class IncomingFilesPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
       return ["error": code, "displayName": name, "sourceUri": source]
     }
     let fm = FileManager.default
+    // PDFs keep the full cap; other documents (sniffed in Dart) are capped at
+    // the largest reader limit (SecurityLimits.maxDocxFileBytes).
+    let rawExt = (name as NSString).pathExtension.lowercased()
+    let ext = rawExt.range(of: "^[a-z0-9]{1,10}$", options: .regularExpression) != nil ? rawExt : "pdf"
+    let cap = ext == "pdf" ? maxBytes : min(maxBytes, nonPdfMaxBytes)
     if let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? NSNumber,
-      size.int64Value > maxBytes
+      size.int64Value > cap
     {
       return failure("tooLarge")
     }
     guard let input = InputStream(url: url) else { return failure("unreadable") }
     let stamp = UUID().uuidString
     let part = inbox.appendingPathComponent("in_\(stamp).part")
-    let target = inbox.appendingPathComponent("in_\(stamp).pdf")
+    let target = inbox.appendingPathComponent("in_\(stamp).\(ext)")
     guard fm.createFile(atPath: part.path, contents: nil),
       let output = try? FileHandle(forWritingTo: part)
     else { return failure("noSpace") }
@@ -229,7 +234,7 @@ final class IncomingFilesPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
       if n < 0 { code = "unreadable"; break }
       if n == 0 { break }
       total += Int64(n)
-      if total > maxBytes { code = "tooLarge"; break }
+      if total > cap { code = "tooLarge"; break }
       do {
         try output.write(contentsOf: Data(buffer[0..<n]))
       } catch {
@@ -251,6 +256,8 @@ final class IncomingFilesPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
   }
 
   /// Mirrors FileNames.sanitize (Kotlin) and sanitizeDisplayName (Dart).
+  private static let nonPdfMaxBytes: Int64 = 100 * 1024 * 1024
+
   static func sanitize(_ raw: String) -> String {
     var n = raw.split(separator: "/", omittingEmptySubsequences: false).last.map(String.init) ?? ""
     n = n.split(separator: "\\", omittingEmptySubsequences: false).last.map(String.init) ?? ""

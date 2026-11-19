@@ -103,7 +103,7 @@ class _IncomingFileListenerState extends ConsumerState<IncomingFileListener> {
     // Navigate after the current frame so a cold-start router is ready.
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
-    unawaited(widget.router.push(Routes.viewer, extra: doc));
+    unawaited(widget.router.push(documentRouteFor(doc), extra: doc));
   }
 
   void _onFailure(IncomingFailure f) {
@@ -131,6 +131,7 @@ class _IncomingFileListenerState extends ConsumerState<IncomingFileListener> {
       OpenFailure.cancelled => 'Opening $name was cancelled.',
       OpenFailure.timeout => 'Opening $name took too long.',
       OpenFailure.unsafe => '$name looks unsafe or too complex to open.',
+      OpenFailure.unsupported => '$name: this file type isn\'t supported.',
     };
   }
 

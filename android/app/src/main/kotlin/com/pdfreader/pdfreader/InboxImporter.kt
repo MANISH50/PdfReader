@@ -65,9 +65,15 @@ class InboxImporter(
             } else {
                 queryMeta(uri)
             }
-            name = FileNames.sanitize(meta.name ?: uri.lastPathSegment)
+            val mime = if (fileSource == null) mimeOf(uri) else null
+            name = FileNames.withExtension(FileNames.sanitize(meta.name ?: uri.lastPathSegment), mime)
+            val ext = FileNames.extensionOf(name)
+            // PDFs keep the full cap; other documents (DOCX / Markdown / text,
+            // sniffed in Dart) are capped at the largest reader limit.
+            val isPdf = ext == "pdf" || mime == "application/pdf"
+            val limit = if (isPdf) maxBytes else minOf(maxBytes, NON_PDF_MAX_BYTES)
             val declared = meta.size
-            if (declared != null && declared > maxBytes) return failure("tooLarge", name, source)
+            if (declared != null && declared > limit) return failure("tooLarge", name, source)
             if (declared != null && inboxDir.usableSpace < declared + FREE_SPACE_RESERVE) {
                 return failure("noSpace", name, source)
             }
@@ -77,11 +83,11 @@ class InboxImporter(
                 ?: return failure("unreadable", name, source)
 
             val stamp = "${System.currentTimeMillis()}_${counter.incrementAndGet()}"
-            val target = File(inboxDir, "in_$stamp.pdf")
+            val target = File(inboxDir, "in_$stamp.${ext ?: "pdf"}")
             val part = File(inboxDir, "in_$stamp.part")
             val total: Long
             try {
-                total = copyCapped(input, part)
+                total = copyCapped(input, part, limit)
             } catch (e: TooLargeException) {
                 part.delete()
                 return failure("tooLarge", name, source)
@@ -113,7 +119,13 @@ class InboxImporter(
         }
     }
 
-    private fun copyCapped(input: InputStream, part: File): Long {
+    private fun mimeOf(uri: Uri): String? = try {
+        context.contentResolver.getType(uri)?.lowercase()
+    } catch (e: RuntimeException) {
+        null
+    }
+
+    private fun copyCapped(input: InputStream, part: File, limit: Long): Long {
         var total = 0L
         input.use { src ->
             FileOutputStream(part).use { out ->
@@ -122,7 +134,7 @@ class InboxImporter(
                     val n = src.read(buf)
                     if (n < 0) break
                     total += n
-                    if (total > maxBytes) throw TooLargeException()
+                    if (total > limit) throw TooLargeException()
                     out.write(buf, 0, n)
                 }
                 out.fd.sync()
@@ -190,6 +202,8 @@ class InboxImporter(
         val counter = AtomicLong()
         const val FREE_SPACE_RESERVE = 16L * 1024 * 1024
         val SHARED_PREFIXES = listOf("/storage/", "/sdcard/", "/mnt/")
+        /** Mirrors SecurityLimits.maxDocxFileBytes (the largest reader cap). */
+        const val NON_PDF_MAX_BYTES = 100L * 1024 * 1024
     }
 }
 
@@ -197,6 +211,28 @@ class InboxImporter(
 object FileNames {
     private const val MAX_LEN = 120
     private const val FALLBACK = "document.pdf"
+
+    private val EXT = Regex("^[a-z0-9]{1,10}$")
+
+    /** Lower-case extension of a sanitised name if it is a plain one, else null. */
+    fun extensionOf(name: String): String? {
+        val dot = name.lastIndexOf('.')
+        if (dot <= 0) return null
+        return name.substring(dot + 1).lowercase().takeIf { EXT.matches(it) }
+    }
+
+    /** Adds an extension derived from [mime] when [name] has none. */
+    fun withExtension(name: String, mime: String?): String {
+        if (extensionOf(name) != null) return name
+        val ext = when (mime) {
+            "application/pdf" -> "pdf"
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> "docx"
+            "text/markdown", "text/x-markdown" -> "md"
+            null -> return name
+            else -> if (mime.startsWith("text/")) "txt" else return name
+        }
+        return "$name.$ext"
+    }
 
     fun sanitize(raw: String?): String {
         var n = (raw ?: "").substringAfterLast('/').substringAfterLast('\\')

@@ -21,4 +21,19 @@ abstract final class SecurityLimits {
 
   /// Max pages merged in one operation.
   static const int maxMergeInputs = 50;
+
+  // ---- Reader (DOCX / Markdown / text) ------------------------------------
+
+  /// Largest text or Markdown file the reader opens.
+  static const int maxTextFileBytes = 20 * 1024 * 1024;
+
+  /// Largest DOCX file the reader opens.
+  static const int maxDocxFileBytes = 100 * 1024 * 1024;
+
+  /// DOCX (untrusted ZIP) limits: entries, uncompressed sizes, time budget.
+  static const int maxDocxEntries = 2000;
+  static const int maxDocxXmlBytes = 50 * 1024 * 1024;
+  static const int maxDocxImageBytes = 20 * 1024 * 1024;
+  static const int maxDocxTotalBytes = 150 * 1024 * 1024;
+  static const Duration readerOpenTimeout = Duration(seconds: 15);
 }

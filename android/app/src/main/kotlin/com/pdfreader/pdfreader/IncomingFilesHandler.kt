@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * Receives PDFs from ACTION_VIEW / ACTION_SEND / ACTION_SEND_MULTIPLE intents and
+ * Receives PDFs (and DOCX / Markdown / text files for the reader) from ACTION_VIEW / ACTION_SEND / ACTION_SEND_MULTIPLE intents and
  * hands them to Dart as private copies in the app's inbox.
  *
  * Protocol (channel "pdfreader/incoming"):

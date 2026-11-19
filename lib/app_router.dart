@@ -5,6 +5,7 @@ import 'features/editor/organize_screen.dart';
 import 'features/export/export_screen.dart';
 import 'features/library/home_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/reader/reader_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/viewer/viewer_screen.dart';
 
@@ -16,7 +17,13 @@ abstract final class Routes {
   static const viewer = '/viewer';
   static const organize = '/organize';
   static const export = '/export';
+
+  /// Read-only reader for DOCX / Markdown / text documents.
+  static const reader = '/reader';
 }
+
+/// The route that shows [doc]: the PDF viewer or the reader.
+String documentRouteFor(DocumentRef doc) => doc.isPdf ? Routes.viewer : Routes.reader;
 
 GoRouter buildRouter({required bool showOnboarding}) => GoRouter(
       initialLocation: showOnboarding ? Routes.onboarding : Routes.home,
@@ -27,6 +34,10 @@ GoRouter buildRouter({required bool showOnboarding}) => GoRouter(
         GoRoute(
           path: Routes.viewer,
           builder: (_, s) => ViewerScreen(document: s.extra! as DocumentRef),
+        ),
+        GoRoute(
+          path: Routes.reader,
+          builder: (_, s) => ReaderScreen(document: s.extra! as DocumentRef),
         ),
         GoRoute(
           path: Routes.organize,
@@ -45,7 +56,7 @@ GoRouter buildRouter({required bool showOnboarding}) => GoRouter(
       errorBuilder: (_, _) => const HomeScreen(),
     );
 
-const _docRoutes = {Routes.viewer, Routes.organize, Routes.export};
+const _docRoutes = {Routes.viewer, Routes.reader, Routes.organize, Routes.export};
 const _knownRoutes = {Routes.home, Routes.onboarding, Routes.settings, ..._docRoutes};
 
 /// Returns where to go instead, or null to allow [path].

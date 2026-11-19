@@ -32,7 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final docs = await pickAndImport(context, ref);
+      final docs = await pickAndImport(context, ref, anyDocument: true);
       if (docs == null || docs.isEmpty || !mounted) return;
       await openInViewer(context, ref, docs.first);
     } finally {
@@ -91,15 +91,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               icon: Icons.picture_as_pdf_outlined,
               illustration: const AppLogo(size: 104),
               title: 'Your library is empty',
-              message: 'Open a PDF from your device to start reading. '
+              message: 'Open a PDF, Word, Markdown or text file from your device to start reading. '
                   'Everything stays on this device — no account, no cloud.',
               action: PrimaryButton(
                 key: const Key('home.open'),
-                label: 'Open PDF',
+                label: 'Open file',
                 icon: Icons.file_open_outlined,
                 busy: _busy,
                 onPressed: _openPdf,
-                semanticHint: 'Choose a PDF file from your device',
+                semanticHint: 'Choose a PDF, Word, Markdown or text file from your device',
               ),
             ),
           ),
@@ -198,15 +198,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       floatingActionButton: all.isEmpty
           ? null
           : Semantics(
-              hint: 'Choose a PDF file from your device',
+              hint: 'Choose a PDF, Word, Markdown or text file from your device',
               child: FloatingActionButton.extended(
                 key: const Key('home.open'),
                 onPressed: _busy ? null : _openPdf,
-                tooltip: 'Open a PDF',
+                tooltip: 'Open a file',
                 icon: _busy
                     ? AdaptiveProgress(size: 20, color: Theme.of(context).colorScheme.onPrimary)
                     : const Icon(Icons.add_rounded),
-                label: const Text('Open PDF'),
+                label: const Text('Open file'),
               ),
             ),
       slivers: slivers,

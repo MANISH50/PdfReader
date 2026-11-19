@@ -40,7 +40,11 @@ class DocumentTileData {
     this.lastOpened,
     this.page,
     this.pageCount,
+    this.badge = 'PDF',
   });
+
+  /// Short file-type label on the placeholder thumbnail (PDF, DOC, MD, TXT).
+  final String badge;
 
   final String id;
   final String name;
@@ -71,8 +75,9 @@ class DocumentTileData {
 /// "PDF" badge; colour is derived from the document id so each file keeps a
 /// stable look. Pass [thumbnail] to show a rendered first page instead.
 class DocumentThumb extends StatelessWidget {
-  const DocumentThumb({super.key, required this.id, this.thumbnail, this.width = 48});
+  const DocumentThumb({super.key, required this.id, this.thumbnail, this.width = 48, this.badge = 'PDF'});
   final String id;
+  final String badge;
   final Widget? thumbnail;
   final double width;
 
@@ -130,7 +135,7 @@ class DocumentThumb extends StatelessWidget {
                             padding: EdgeInsets.symmetric(horizontal: w * 0.06, vertical: w * 0.02),
                             decoration: BoxDecoration(color: ink, borderRadius: Radii.pill),
                             child: Text(
-                              'PDF',
+                              badge,
                               textScaler: TextScaler.noScaling,
                               style: TextStyle(
                                 color: tint,
@@ -192,7 +197,7 @@ class DocumentTile extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: Space.sm + 2),
                   child: Row(
                     children: [
-                      DocumentThumb(id: data.id, thumbnail: thumbnail, width: 48),
+                      DocumentThumb(id: data.id, thumbnail: thumbnail, width: 48, badge: data.badge),
                       const SizedBox(width: Space.md),
                       Expanded(
                         child: Column(
@@ -271,6 +276,7 @@ class DocumentCard extends StatelessWidget {
                           child: DocumentThumb(
                             id: data.id,
                             thumbnail: thumbnail,
+                            badge: data.badge,
                             width: (c.maxHeight / 1.3).clamp(0, 120).toDouble(),
                           ),
                         ),

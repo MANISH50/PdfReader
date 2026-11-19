@@ -55,6 +55,9 @@ class FakePicker implements FilePickService {
   }
 
   @override
+  Future<List<String>> pickDocuments() async => result;
+
+  @override
   Future<String?> saveAs(String sourcePath, {required String suggestedName}) async => null;
 }
 

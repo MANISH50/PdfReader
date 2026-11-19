@@ -12,6 +12,9 @@ enum OpenFailure {
   /// Pre-scan found a decompression bomb or similar: "This file looks unsafe
   /// or too complex to open" (see core/security/pdf_prescan.dart).
   unsafe,
+
+  /// Not a PDF, DOCX, Markdown or text file: "This file type isn't supported".
+  unsupported,
 }
 
 class DocumentOpenException implements Exception {

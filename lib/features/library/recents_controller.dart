@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/documents/document_kind.dart';
 import '../../core/models/document_ref.dart';
 import '../../core/models/reading_state.dart';
 import '../../core/providers.dart';
@@ -19,7 +20,13 @@ class RecentEntry {
         sizeBytes: doc.sizeBytes,
         lastOpened: state.lastOpened,
         // Only show a page label once the user has moved past page 1.
-        page: state.pageNumber > 1 ? state.pageNumber : null,
+        page: doc.isPdf && state.pageNumber > 1 ? state.pageNumber : null,
+        badge: switch (doc.kind) {
+          DocumentKind.pdf => 'PDF',
+          DocumentKind.docx => 'DOC',
+          DocumentKind.markdown => 'MD',
+          DocumentKind.text => 'TXT',
+        },
       );
 }
 

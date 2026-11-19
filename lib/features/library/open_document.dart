@@ -22,21 +22,25 @@ String friendlyOpenError(Object error) {
       OpenFailure.cancelled => 'Cancelled.',
       OpenFailure.timeout => 'Opening took too long. Please try again.',
       OpenFailure.unsafe => 'This file looks unsafe or too complex to open.',
+      OpenFailure.unsupported => "This file type isn't supported.",
     };
   }
   return 'Couldn’t open that file. Please try again.';
 }
 
-/// Picks one or more PDFs with the system picker and imports them.
+/// Picks one or more PDFs with the system picker and imports them. With
+/// [anyDocument], one file of any supported kind (PDF, DOCX, Markdown, text).
 /// Returns an empty list if the user cancelled; shows a snackbar and
 /// returns null on failure.
 Future<List<DocumentRef>?> pickAndImport(
   BuildContext context,
   WidgetRef ref, {
   bool multiple = false,
+  bool anyDocument = false,
 }) async {
   try {
-    final paths = await ref.read(filePickServiceProvider).pickPdfs(multiple: multiple);
+    final picker = ref.read(filePickServiceProvider);
+    final paths = anyDocument ? await picker.pickDocuments() : await picker.pickPdfs(multiple: multiple);
     if (paths.isEmpty) return const [];
     final service = ref.read(documentServiceProvider);
     return [for (final p in paths) await service.importFile(p)];
@@ -47,7 +51,12 @@ Future<List<DocumentRef>?> pickAndImport(
   }
 }
 
-/// Opens [doc] in the viewer, recording it in recents first.
+/// Pushes the right screen for [doc]: the PDF viewer, or the reader for
+/// DOCX / Markdown / text. Every place that opens a document goes through here.
+Future<void> openDocumentRoute(BuildContext context, DocumentRef doc) =>
+    context.push(documentRouteFor(doc), extra: doc);
+
+/// Opens [doc] (viewer or reader), recording it in recents first.
 Future<void> openInViewer(BuildContext context, WidgetRef ref, DocumentRef doc) async {
   try {
     await ref.read(recentsProvider.notifier).touch(doc);
@@ -55,6 +64,6 @@ Future<void> openInViewer(BuildContext context, WidgetRef ref, DocumentRef doc) 
     // Recents are a convenience; never block opening on them.
   }
   if (!context.mounted) return;
-  await context.push(Routes.viewer, extra: doc);
+  await openDocumentRoute(context, doc);
   ref.invalidate(recentsProvider); // reading position may have changed
 }

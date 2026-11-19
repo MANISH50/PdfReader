@@ -50,6 +50,12 @@ class _FakePicker implements FilePickerApi {
   }
 
   @override
+  Future<List<PlatformFile>> pickAny() async {
+    lastMultiple = false;
+    return toPick;
+  }
+
+  @override
   Future<Uri?> saveFile({required String fileName, required Uint8List bytes, required String mimeType}) async {
     savedName = fileName;
     savedBytes = bytes;
@@ -72,6 +78,20 @@ void main() {
     picker = _FakePicker();
   });
   tearDown(() => tmp.deleteSync(recursive: true));
+
+  group('PluginFilePickService.pickDocuments', () {
+    test('keeps the document extension (docx, md, txt) and clears the cache', () async {
+      final data = Uint8List.fromList(List.generate(10, (i) => i));
+      final s = PluginFilePickService(inboxPath: inbox, api: picker);
+      for (final (name, want) in [('../Notes.md', 'Notes.md'), ('Report.docx', 'Report.docx'), ('scan', 'scan.pdf')]) {
+        picker.toPick = [_FakeFile(name, data)];
+        final paths = await s.pickDocuments();
+        expect(p.basename(paths.single), want);
+        expect(p.isWithin(inbox, paths.single), isTrue);
+      }
+      expect(picker.cleared, 3);
+    });
+  });
 
   group('PluginFilePickService.pickPdfs', () {
     test('copies picked files into the inbox and clears the picker cache', () async {

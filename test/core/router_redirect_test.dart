@@ -21,6 +21,9 @@ void main() {
     expect(routeRedirect(Routes.viewer, null), Routes.home);
     expect(routeRedirect(Routes.export, 'junk'), Routes.home);
     expect(routeRedirect(Routes.viewer, doc), isNull);
+    expect(routeRedirect(Routes.reader, null), Routes.home);
+    expect(routeRedirect(Routes.reader, 'junk', showOnboarding: true), Routes.onboarding);
+    expect(routeRedirect(Routes.reader, doc), isNull);
     expect(routeRedirect(Routes.home, null), isNull);
     expect(routeRedirect(Routes.settings, null), isNull);
   });

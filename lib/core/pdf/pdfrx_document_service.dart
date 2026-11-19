@@ -7,6 +7,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
 
+import '../documents/document_kind.dart';
 import '../models/document_ref.dart';
 import '../security/limits.dart';
 import '../security/pdf_prescan.dart';
@@ -71,7 +72,8 @@ class PdfrxDocumentService implements DocumentService {
     } on FileSystemException {
       throw const DocumentOpenException(OpenFailure.notFound);
     }
-    _checkSize(size);
+    // Tiny files can't be PDFs but can be text: the PDF minimum applies below.
+    if (size > maxFileBytes) throw DocumentOpenException(OpenFailure.tooLarge, '$size bytes');
     final RandomAccessFile raf;
     try {
       raf = await file.open();
@@ -80,10 +82,27 @@ class PdfrxDocumentService implements DocumentService {
     }
     try {
       final head = await _readAt(raf, 0, hashChunkBytes < size ? hashChunkBytes : size);
-      if (!hasPdfHeader(head)) throw const DocumentOpenException(OpenFailure.notPdf);
+      var kind = DocumentKind.pdf;
+      if (hasPdfHeader(head)) {
+        _checkSize(size);
+      } else {
+        // Not a PDF: maybe a DOCX / Markdown / text file for the reader.
+        // A file named .pdf without a PDF header is still "not a PDF".
+        if (documentExtension(path, displayName: displayName) == '.pdf') {
+          throw const DocumentOpenException(OpenFailure.notPdf);
+        }
+        final sniffed = await sniffDocumentKind(path, displayName: displayName);
+        if (sniffed == null || sniffed == DocumentKind.pdf) {
+          throw const DocumentOpenException(OpenFailure.unsupported);
+        }
+        final cap = sniffed == DocumentKind.docx ? SecurityLimits.maxDocxFileBytes : SecurityLimits.maxTextFileBytes;
+        if (size > cap) throw const DocumentOpenException(OpenFailure.tooLarge);
+        kind = sniffed;
+      }
       final tailLen = hashChunkBytes < size ? hashChunkBytes : size;
       final tail = await _readAt(raf, size - tailLen, tailLen);
       return DocumentRef(
+        kind: kind,
         id: computeId(size, head, tail),
         path: path,
         displayName: (displayName == null || displayName.trim().isEmpty)

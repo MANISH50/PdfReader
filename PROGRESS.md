@@ -43,5 +43,6 @@ Feature work is on per-agent branches; paused agents keep their work and resume 
 | Export contract | `lib/core/export/exporter.dart` | `Exporter` |
 | Platform contracts | `lib/platform/platform_services.dart` | `IncomingFileService`, `ShareService`, `FilePickService` |
 | Wiring | `lib/core/providers.dart` | Each agent replaces only its own provider lines |
-| Routes | `lib/app_router.dart` | `/`, `/onboarding`, `/settings`, `/viewer`, `/organize`, `/export` (document via `extra`) |
+| Routes | `lib/app_router.dart` | `/`, `/onboarding`, `/settings`, `/viewer`, `/reader`, `/organize`, `/export` (document via `extra`); open any `DocumentRef` with `openDocumentRoute` / `documentRouteFor` (viewer for PDFs, reader otherwise) |
+| Reader | `lib/core/documents/document_kind.dart`, `lib/features/reader/` | `sniffDocumentKind`; DOCX / Markdown / text parsed off-isolate into blocks, rendered lazily by `ReaderScreen` |
 | Design | `lib/ui/design_system/` | tokens, `AppTheme`, `ReadingThemeSpec`, adaptive widgets |

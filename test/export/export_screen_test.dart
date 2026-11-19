@@ -57,6 +57,8 @@ class _Save implements FilePickService {
   @override
   Future<List<String>> pickPdfs({bool multiple = false}) async => [];
   @override
+  Future<List<String>> pickDocuments() async => [];
+  @override
   Future<String?> saveAs(String sourcePath, {required String suggestedName}) => throw StateError('no SAF');
 }
 

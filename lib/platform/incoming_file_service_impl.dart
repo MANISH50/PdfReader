@@ -117,7 +117,7 @@ class ChannelIncomingFileService implements IncomingFileService, IncomingFailure
       }
       out.add(IncomingFile(
         path: path,
-        displayName: pdfFileName(name is String ? name : null),
+        displayName: documentFileName(name is String ? name : null),
         sourceUri: source is String ? source : null,
       ));
     }

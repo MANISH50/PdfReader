@@ -51,6 +51,7 @@ Step-by-step help for both phones is in **[INSTALL.md](INSTALL.md)**.
 - Search inside the document. Select and copy text.
 - Links inside the document. Back and forward after you follow a link.
 - Opens password-protected PDFs.
+- Also opens Word (.docx), Markdown (.md) and plain-text files (.txt, logs, CSV, JSON, code) for reading — offline, with search, text size and page colours.
 - Light, dark, sepia and inverted page colours.
 - Remembers your last page and zoom for each file.
 

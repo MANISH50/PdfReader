@@ -10,11 +10,11 @@ import 'helpers.dart';
 
 void main() {
   group('HomeScreen', () {
-    testWidgets('empty state offers Open PDF which imports and opens the viewer', (tester) async {
+    testWidgets('empty state offers Open file which imports and opens the viewer', (tester) async {
       final h = Harness(picker: FakePicker(['/picked/Paper.pdf']));
       await h.pump(tester, Routes.home);
       expect(find.text('Your library is empty'), findsOneWidget);
-      await tester.tap(find.text('Open PDF'));
+      await tester.tap(find.text('Open file'));
       await tester.pumpAndSettle();
       expect(find.text('viewer:Paper.pdf'), findsOneWidget);
       // Recorded in recents.
@@ -25,7 +25,7 @@ void main() {
     testWidgets('cancelled picker does nothing', (tester) async {
       final h = Harness();
       await h.pump(tester, Routes.home);
-      await tester.tap(find.text('Open PDF'));
+      await tester.tap(find.text('Open file'));
       await tester.pumpAndSettle();
       expect(find.text('Your library is empty'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
@@ -37,7 +37,7 @@ void main() {
         documents: FakeDocumentService(fail: OpenFailure.corrupted),
       );
       await h.pump(tester, Routes.home);
-      await tester.tap(find.text('Open PDF'));
+      await tester.tap(find.text('Open file'));
       await tester.pump();
       expect(find.text(friendlyOpenError(const DocumentOpenException(OpenFailure.corrupted))), findsOneWidget);
     });

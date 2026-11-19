@@ -32,6 +32,8 @@ In the app: **Settings** ▸ **Licenses**.
 | [path_provider](https://pub.dev/packages/path_provider) | 2.1.6 | BSD-3-Clause | Finding the app's private folders |
 | [path](https://pub.dev/packages/path) | 1.9.x | BSD-3-Clause | File path helpers |
 | [crypto](https://pub.dev/packages/crypto) | 3.0.x | BSD-3-Clause | File hashes |
+| [markdown](https://pub.dev/packages/markdown) | 7.3.0 | BSD-3-Clause | Parsing Markdown files for the reader |
+| [xml](https://pub.dev/packages/xml) | 7.1.0 | MIT | Reading Word (.docx) documents |
 
 Also: `url_launcher` (BSD-3), `wakelock_plus` (BSD-3), `pdfium_dart` (MIT), `ffi` (BSD-3). Full list with versions: in-app Licenses page and `pubspec.lock`.
 

@@ -36,6 +36,13 @@ String sanitizeDisplayName(String? raw) {
   return n;
 }
 
+/// [sanitizeDisplayName], keeping the name's own extension (documents of any
+/// supported kind); names without an extension get `.pdf`, as before.
+String documentFileName(String? raw) {
+  final n = sanitizeDisplayName(raw);
+  return RegExp(r'\.[A-Za-z0-9]{1,10}$').hasMatch(n) ? n : '$n.pdf';
+}
+
 /// [sanitizeDisplayName] plus a guaranteed `.pdf` extension.
 String pdfFileName(String? raw) {
   final n = sanitizeDisplayName(raw);

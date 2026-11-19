@@ -20,6 +20,9 @@ class PickedFileTooLargeException implements Exception {
 /// The subset of file_picker we use, injectable for tests.
 abstract interface class FilePickerApi {
   Future<List<PlatformFile>> pickPdfs({required bool multiple});
+
+  /// One file of any type (sniffed after import).
+  Future<List<PlatformFile>> pickAny();
   Future<Uri?> saveFile({required String fileName, required Uint8List bytes, required String mimeType});
   Future<void> clearTemporaryFiles();
 }
@@ -37,6 +40,14 @@ class _PluginFilePickerApi implements FilePickerApi {
   }
 
   @override
+  Future<List<PlatformFile>> pickAny() async {
+    // FileType.any: extension filters are unreliable across providers (many
+    // report text files as application/octet-stream); the import sniffs.
+    final f = await FilePicker.pickFile(type: FileType.any);
+    return f == null ? const [] : [f];
+  }
+
+  @override
   Future<Uri?> saveFile({required String fileName, required Uint8List bytes, required String mimeType}) =>
       FilePicker.saveFile(fileName: fileName, bytes: bytes, mimeType: mimeType);
 
@@ -48,7 +59,8 @@ class _PluginFilePickerApi implements FilePickerApi {
 /// (Android SAF / iOS UIDocumentPicker) — no storage permission needed.
 ///
 /// Picked files are streamed into the private inbox (size-capped, one fresh
-/// directory per file named `<sanitised display name>.pdf`), then the picker's own cache copies are cleared, so the rest of the
+/// directory per file named `<sanitised display name>.pdf`, or the sanitised
+/// name with its own extension for [pickDocuments]), then the picker's own cache copies are cleared, so the rest of the
 /// app only sees app-private paths.
 class PluginFilePickService implements FilePickService {
   PluginFilePickService({
@@ -63,13 +75,18 @@ class PluginFilePickService implements FilePickService {
   int _n = 0;
 
   @override
-  Future<List<String>> pickPdfs({bool multiple = false}) async {
-    final picked = await _api.pickPdfs(multiple: multiple);
+  Future<List<String>> pickPdfs({bool multiple = false}) async =>
+      _importPicked(await _api.pickPdfs(multiple: multiple), multiple: multiple, pdfOnly: true);
+
+  @override
+  Future<List<String>> pickDocuments() async => _importPicked(await _api.pickAny(), multiple: false, pdfOnly: false);
+
+  Future<List<String>> _importPicked(List<PlatformFile> picked, {required bool multiple, required bool pdfOnly}) async {
     final out = <String>[];
     try {
       final limit = multiple ? SecurityLimits.maxMergeInputs : 1;
       for (final f in picked.take(limit)) {
-        out.add(await _copyIn(f));
+        out.add(await _copyIn(f, pdfOnly: pdfOnly));
       }
     } catch (_) {
       for (final path in out) {
@@ -86,8 +103,8 @@ class PluginFilePickService implements FilePickService {
     return out;
   }
 
-  Future<String> _copyIn(PlatformFile f) async {
-    final name = pdfFileName(f.name);
+  Future<String> _copyIn(PlatformFile f, {required bool pdfOnly}) async {
+    final name = pdfOnly ? pdfFileName(f.name) : documentFileName(f.name);
     final known = f.lengthSync();
     if (known != null && known > maxBytes) throw PickedFileTooLargeException(name);
 

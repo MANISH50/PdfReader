@@ -229,6 +229,9 @@ class FakeFilePickService implements FilePickService {
   }
 
   @override
+  Future<List<String>> pickDocuments() => pickPdfs();
+
+  @override
   Future<String?> saveAs(String sourcePath, {required String suggestedName}) async {
     saveAsCalls.add((sourcePath: sourcePath, suggestedName: suggestedName));
     return saveAsQueue.isEmpty ? null : saveAsQueue.removeAt(0);

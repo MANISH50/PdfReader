@@ -237,4 +237,10 @@ Future<bool> confirmExternalLink(BuildContext context, Uri uri) async {
           icon: Icons.gpp_bad_outlined,
           canRetry: false,
         ),
+      OpenFailure.unsupported => (
+          title: 'Not supported',
+          message: 'This file type isn\'t supported.',
+          icon: Icons.block_outlined,
+          canRetry: false,
+        ),
     };
