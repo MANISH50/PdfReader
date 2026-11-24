@@ -139,10 +139,50 @@ final class ImageBlock extends RBlock {
   String get searchText => '';
 }
 
+/// One sheet of a spreadsheet (CSV/TSV has exactly one). Cells are plain
+/// strings; rows may be shorter than [columnCount].
+final class SheetData {
+  const SheetData({required this.name, required this.rows, required this.columnCount, this.truncated = false});
+  final String name;
+  final List<List<String>> rows;
+  final int columnCount;
+
+  /// True when a size cap cut the sheet short.
+  final bool truncated;
+
+  String cell(int row, int col) {
+    final r = rows[row];
+    return col < r.length ? r[col] : '';
+  }
+}
+
+/// Spreadsheet column label: 0 → A, 25 → Z, 26 → AA.
+String columnLabel(int index) {
+  final b = StringBuffer();
+  var n = index + 1;
+  final chars = <int>[];
+  while (n > 0) {
+    final m = (n - 1) % 26;
+    chars.add(65 + m);
+    n = (n - 1) ~/ 26;
+  }
+  b.write(String.fromCharCodes(chars.reversed));
+  return b.toString();
+}
+
 class ReaderDocument {
-  const ReaderDocument({required this.kind, required this.blocks, this.monospace = false, this.notice});
+  const ReaderDocument({
+    required this.kind,
+    this.blocks = const [],
+    this.monospace = false,
+    this.notice,
+    this.sheets,
+  });
   final DocumentKind kind;
   final List<RBlock> blocks;
+
+  /// Set for spreadsheets (CSV/TSV/XLSX): shown as a grid, not [blocks].
+  final List<SheetData>? sheets;
 
   /// Plain text shown in a monospace font (code, data, logs).
   final bool monospace;

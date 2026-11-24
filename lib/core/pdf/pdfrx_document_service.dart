@@ -95,7 +95,8 @@ class PdfrxDocumentService implements DocumentService {
         if (sniffed == null || sniffed == DocumentKind.pdf) {
           throw const DocumentOpenException(OpenFailure.unsupported);
         }
-        final cap = sniffed == DocumentKind.docx ? SecurityLimits.maxDocxFileBytes : SecurityLimits.maxTextFileBytes;
+        final zipped = sniffed == DocumentKind.docx || (sniffed == DocumentKind.sheet && hasZipMagic(head));
+        final cap = zipped ? SecurityLimits.maxDocxFileBytes : SecurityLimits.maxTextFileBytes;
         if (size > cap) throw const DocumentOpenException(OpenFailure.tooLarge);
         kind = sniffed;
       }

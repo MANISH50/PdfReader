@@ -26,6 +26,8 @@ class RecentEntry {
           DocumentKind.docx => 'DOC',
           DocumentKind.markdown => 'MD',
           DocumentKind.text => 'TXT',
+          DocumentKind.sheet =>
+            delimitedExtensions.contains(documentExtension(doc.path, displayName: doc.displayName)) ? 'CSV' : 'XLS',
         },
       );
 }

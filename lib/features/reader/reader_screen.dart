@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -18,6 +19,7 @@ import '../viewer/viewer_dialogs.dart' show confirmExternalLink;
 import 'block_view.dart';
 import 'reader_loader.dart';
 import 'reader_model.dart';
+import 'sheet_view.dart';
 import 'text_markdown_parser.dart' show headingSlug, kMaxLineChars;
 
 Future<bool> _launchExternal(Uri uri) async {
@@ -28,7 +30,7 @@ Future<bool> _launchExternal(Uri uri) async {
   }
 }
 
-/// Read-only reader for DOCX, Markdown and plain-text files.
+/// Read-only reader for DOCX, Markdown, plain-text and spreadsheet files.
 ///
 /// The document is parsed off the UI isolate ([loadReaderDocument]) into a
 /// flat list of blocks rendered lazily, so multi-megabyte logs stay smooth.
@@ -67,6 +69,18 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
   Map<int, List<ReaderHit>> _hitsByBlock = const {};
   int _current = -1;
 
+  // Spreadsheets: selected sheet and cell search hits across all sheets.
+  int _sheet = 0;
+  int _sheetStartRow = 0;
+  final _sheetKey = GlobalKey<SheetViewState>();
+  List<({int sheet, int row, int col})> _cellHits = const [];
+
+  int get _hitCount => _doc?.sheets != null ? _cellHits.length : _hits.length;
+
+  /// Reading position of a sheet, packed into [ReadingState.pageNumber]
+  /// (sheet × 1 000 000 + row + 1; rows are capped at 100 000).
+  static int _packSheetPos(int sheet, int row) => sheet * 1000000 + row + 1;
+
   final _scroll = ScrollController();
   final _listKey = GlobalKey();
   final _built = <int, BuildContext>{};
@@ -100,7 +114,17 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
         _doc = doc;
         _state = state;
       });
-      if (state.pageNumber > 1) {
+      final sheets = doc.sheets;
+      if (sheets != null) {
+        final packed = state.pageNumber - 1;
+        final sh = packed ~/ 1000000;
+        if (sh < sheets.length) {
+          setState(() {
+            _sheet = sh;
+            _sheetStartRow = packed % 1000000;
+          });
+        }
+      } else if (state.pageNumber > 1) {
         SchedulerBinding.instance.addPostFrameCallback((_) => _scrollToBlock(state.pageNumber - 1, alignment: 0));
       }
       _scheduleSave();
@@ -135,6 +159,11 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   /// Records the first visible block and the scroll fraction in [_state].
   void _capturePosition() {
+    if (_doc?.sheets != null) {
+      final row = _sheetKey.currentState?.topRow ?? _sheetStartRow;
+      _state = _state.copyWith(pageNumber: _packSheetPos(_sheet, row));
+      return;
+    }
     final top = _topVisibleBlock();
     double? fraction;
     if (_scroll.hasClients && _scroll.position.maxScrollExtent > 0) {
@@ -220,6 +249,7 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
       _searching = false;
       _hits = const [];
       _hitsByBlock = const {};
+      _cellHits = const [];
       _current = -1;
     });
   }
@@ -234,6 +264,10 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
     final doc = _doc;
     if (doc == null) return;
     final needle = query.toLowerCase();
+    if (doc.sheets case final sheets?) {
+      _searchSheets(sheets, needle);
+      return;
+    }
     final hits = <ReaderHit>[];
     if (needle.isNotEmpty) {
       final texts = _lowerTexts ??= [for (final b in doc.blocks) b.searchText.toLowerCase()];
@@ -262,16 +296,60 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
     if (hits.isNotEmpty) unawaited(_scrollToBlock(hits.first.block));
   }
 
+  void _searchSheets(List<SheetData> sheets, String needle) {
+    final hits = <({int sheet, int row, int col})>[];
+    if (needle.isNotEmpty) {
+      outer:
+      for (var sh = 0; sh < sheets.length; sh++) {
+        final rows = sheets[sh].rows;
+        for (var r = 0; r < rows.length; r++) {
+          final row = rows[r];
+          for (var c = 0; c < row.length; c++) {
+            if (row[c].toLowerCase().contains(needle)) {
+              hits.add((sheet: sh, row: r, col: c));
+              if (hits.length >= maxHits) break outer;
+            }
+          }
+        }
+      }
+    }
+    // Start at the first hit in the sheet being viewed.
+    final first = hits.indexWhere((h) => h.sheet >= _sheet);
+    setState(() {
+      _cellHits = hits;
+      _current = hits.isEmpty ? -1 : (first < 0 ? 0 : first);
+    });
+    if (hits.isNotEmpty) _showCellHit();
+  }
+
+  void _showCellHit() {
+    final h = _cellHits[_current];
+    if (h.sheet != _sheet) {
+      setState(() {
+        _sheet = h.sheet;
+        _sheetStartRow = h.row;
+      });
+    }
+    SchedulerBinding.instance.addPostFrameCallback((_) => _sheetKey.currentState?.scrollToCell((row: h.row, col: h.col)));
+  }
+
   void _step(int delta) {
+    if (_doc?.sheets != null) {
+      if (_cellHits.isEmpty) return;
+      setState(() => _current = (_current + delta) % _cellHits.length);
+      _showCellHit();
+      return;
+    }
     if (_hits.isEmpty) return;
     setState(() => _current = (_current + delta) % _hits.length);
     unawaited(_scrollToBlock(_hits[_current].block));
   }
 
   String get _countLabel {
-    if (_hits.isEmpty) return _query.text.isEmpty ? '' : 'No matches';
-    final more = _hits.length >= maxHits ? '+' : '';
-    return '${_current + 1} of ${_hits.length}$more';
+    final n = _hitCount;
+    if (n == 0) return _query.text.isEmpty ? '' : 'No matches';
+    final more = n >= maxHits ? '+' : '';
+    return '${_current + 1} of $n$more';
   }
 
   // ---- actions ---------------------------------------------------------------
@@ -419,6 +497,8 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
       content = _ErrorView(message: _error!, style: style);
     } else if (doc == null) {
       content = Center(child: AdaptiveProgress(color: style.muted));
+    } else if (doc.sheets != null) {
+      content = _sheets(doc, style, barHeight, mq);
     } else {
       content = _list(doc, style, barHeight, mq);
     }
@@ -512,6 +592,82 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
     );
   }
 
+  Widget _sheets(ReaderDocument doc, ReaderStyle style, double barHeight, MediaQueryData mq) {
+    final sheets = doc.sheets!;
+    final sheet = sheets[_sheet.clamp(0, sheets.length - 1)];
+    final hit = _current >= 0 && _current < _cellHits.length ? _cellHits[_current] : null;
+    final hitSet = <CellRef>{
+      for (final h in _cellHits)
+        if (h.sheet == _sheet) (row: h.row, col: h.col),
+    };
+    final tabs = sheets.length > 1;
+    return Column(children: [
+      if (doc.notice != null) SizedBox(height: barHeight),
+      if (doc.notice != null) _Notice(text: doc.notice!, style: style),
+      Expanded(
+        child: SheetView(
+          key: _sheetKey,
+          sheet: sheet,
+          style: style,
+          topInset: doc.notice != null ? 0 : barHeight,
+          bottomInset: tabs ? 0 : mq.padding.bottom,
+          hits: hitSet,
+          current: hit != null && hit.sheet == _sheet ? (row: hit.row, col: hit.col) : null,
+          initialRow: _sheetStartRow,
+          onCellTap: _showCell,
+          onScrollEnd: _scheduleSave,
+        ),
+      ),
+      if (tabs)
+        Container(
+          decoration: BoxDecoration(
+            color: style.background,
+            border: Border(top: BorderSide(color: style.border.withValues(alpha: 0.5), width: 0.5)),
+          ),
+          padding: EdgeInsets.only(bottom: mq.padding.bottom),
+          child: SheetTabs(
+            key: const Key('reader.sheetTabs'),
+            names: [for (final s in sheets) s.name],
+            selected: _sheet,
+            style: style,
+            onSelected: (i) {
+              if (i == _sheet) return;
+              setState(() {
+                _sheet = i;
+                _sheetStartRow = 0;
+              });
+              _scheduleSave();
+            },
+          ),
+        ),
+    ]);
+  }
+
+  void _showCell(CellRef cell, String text) {
+    showAppBottomSheet<void>(
+      context,
+      title: '${columnLabel(cell.col)}${cell.row + 1}',
+      builder: (c) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SelectableText(text, key: const Key('reader.cell.text'), style: Theme.of(c).textTheme.bodyLarge),
+          const SizedBox(height: Space.md),
+          FilledButton.tonalIcon(
+            key: const Key('reader.cell.copy'),
+            icon: const Icon(Icons.copy_rounded),
+            label: const Text('Copy'),
+            onPressed: () {
+              unawaited(Clipboard.setData(ClipboardData(text: text)));
+              Navigator.of(c).pop();
+              _snack('Copied');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   PreferredSizeWidget _appBar(ReaderStyle style, PageTheme theme, bool dark) {
     final fg = style.foreground;
     return AppBar(
@@ -543,7 +699,7 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
               onChanged: _onQueryChanged,
               onSubmitted: (q) {
                 _debounce?.cancel();
-                if (_hits.isNotEmpty && q.toLowerCase() == _lastQuery) {
+                if (_hitCount > 0 && q.toLowerCase() == _lastQuery) {
                   _step(1);
                 } else {
                   runSearch(q);
@@ -566,13 +722,13 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
                 key: const Key('reader.search.prev'),
                 tooltip: 'Previous match',
                 icon: const Icon(Icons.keyboard_arrow_up_rounded),
-                onPressed: _hits.isEmpty ? null : () => _step(-1),
+                onPressed: _hitCount == 0 ? null : () => _step(-1),
               ),
               IconButton(
                 key: const Key('reader.search.next'),
                 tooltip: 'Next match',
                 icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                onPressed: _hits.isEmpty ? null : () => _step(1),
+                onPressed: _hitCount == 0 ? null : () => _step(1),
               ),
               IconButton(
                 key: const Key('reader.search.close'),

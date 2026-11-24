@@ -1,28 +1,18 @@
 import 'dart:io' as io;
 import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 import 'package:xml/xml_events.dart';
 
 import '../../core/documents/document_kind.dart';
 import '../../core/security/limits.dart';
 import 'reader_model.dart';
+import 'safe_zip.dart';
+
+export 'safe_zip.dart' show DocxLimits;
 
 /// Shown above every DOCX in the reader.
 const docxNotice = 'Showing text and basic formatting; complex layouts may look different.';
-
-/// Caps for reading an untrusted DOCX (a ZIP). Defaults: [SecurityLimits].
-class DocxLimits {
-  const DocxLimits({
-    this.maxEntries = SecurityLimits.maxDocxEntries,
-    this.maxXmlBytes = SecurityLimits.maxDocxXmlBytes,
-    this.maxImageBytes = SecurityLimits.maxDocxImageBytes,
-    this.maxTotalBytes = SecurityLimits.maxDocxTotalBytes,
-    this.maxImagePixels = SecurityLimits.maxRenderPixels,
-  });
-  final int maxEntries, maxXmlBytes, maxImageBytes, maxTotalBytes, maxImagePixels;
-}
 
 /// Parses a DOCX file's bytes into reader blocks.
 ///
@@ -34,151 +24,21 @@ class DocxLimits {
 /// (vbaProject.bin) are never read.
 ReaderDocument parseDocx(Uint8List bytes, {DocxLimits limits = const DocxLimits(), ParseBudget? budget}) {
   try {
-    final zip = _SafeZip(bytes, limits, budget);
+    final zip = SafeZip(bytes, limits, budget);
     final docXml = zip.readText('word/document.xml', limits.maxXmlBytes);
     if (docXml == null) throw const ReaderOpenException(ReaderFailure.damaged);
     final styles = _Styles.parse(zip.readText('word/styles.xml', limits.maxXmlBytes), budget);
     final numbering = _Numbering.parse(zip.readText('word/numbering.xml', limits.maxXmlBytes), budget);
-    final rels = _parseRels(zip.readText('word/_rels/document.xml.rels', limits.maxXmlBytes));
+    final rels = parseRels(zip.readText('word/_rels/document.xml.rels', limits.maxXmlBytes));
     final blocks = _DocxBody(zip, styles, numbering, rels, limits, budget).parse(docXml);
     return ReaderDocument(kind: DocumentKind.docx, blocks: blocks, notice: docxNotice);
   } on ReaderOpenException {
     rethrow;
-  } on _ZipBomb {
+  } on ZipBomb {
     throw const ReaderOpenException(ReaderFailure.unsafe);
   } catch (_) {
     throw const ReaderOpenException(ReaderFailure.damaged);
   }
-}
-
-class _ZipBomb implements Exception {
-  const _ZipBomb();
-}
-
-class _SafeZip {
-  _SafeZip(this.bytes, this.limits, this.budget) {
-    var n = 0;
-    final headers = ZipDirectory().headers(InputMemoryStream(bytes), files: false);
-    for (final h in headers) {
-      if (++n > limits.maxEntries) throw const ReaderOpenException(ReaderFailure.unsafe);
-      final name = h.filename;
-      if (!_safeName(name)) throw const ReaderOpenException(ReaderFailure.unsafe);
-      if (name.endsWith('/')) continue;
-      // Duplicate names are a classic parser-confusion trick.
-      if (entries.containsKey(name)) throw const ReaderOpenException(ReaderFailure.unsafe);
-      entries[name] = h;
-    }
-    if (n == 0) throw const ReaderOpenException(ReaderFailure.damaged);
-  }
-
-  final Uint8List bytes;
-  final DocxLimits limits;
-  final ParseBudget? budget;
-  final entries = <String, ZipFileHeader>{};
-  int _total = 0;
-
-  static bool _safeName(String name) {
-    if (name.isEmpty || name.contains('\\') || name.contains('\u0000')) return false;
-    if (name.startsWith('/') || RegExp(r'^[A-Za-z]:').hasMatch(name)) return false;
-    return !name.split('/').any((s) => s == '..');
-  }
-
-  String? readText(String name, int cap) {
-    final b = read(name, cap);
-    if (b == null) return null;
-    return decodeText(b, lenient: true);
-  }
-
-  /// Inflates [name] with a hard cap of [cap] bytes; null if missing.
-  Uint8List? read(String name, int cap) {
-    final h = entries[name];
-    if (h == null) return null;
-    if (h.generalPurposeBitFlag & 1 != 0) throw const ReaderOpenException(ReaderFailure.unsupported); // encrypted
-    if (h.uncompressedSize > cap || _total + h.uncompressedSize > limits.maxTotalBytes) throw const _ZipBomb();
-    final off = h.localHeaderOffset;
-    if (off < 0 || off + 30 > bytes.length) throw const ReaderOpenException(ReaderFailure.damaged);
-    final bd = ByteData.sublistView(bytes);
-    if (bd.getUint32(off, Endian.little) != 0x04034b50) throw const ReaderOpenException(ReaderFailure.damaged);
-    final start = off + 30 + bd.getUint16(off + 26, Endian.little) + bd.getUint16(off + 28, Endian.little);
-    final end = start + h.compressedSize;
-    if (end > bytes.length || h.compressedSize < 0) throw const ReaderOpenException(ReaderFailure.damaged);
-    final raw = Uint8List.sublistView(bytes, start, end);
-    final remaining = limits.maxTotalBytes - _total;
-    final limit = cap < remaining ? cap : remaining;
-    final Uint8List out;
-    switch (h.compressionMethod) {
-      case 0:
-        if (raw.length > limit) throw const _ZipBomb();
-        out = raw;
-      case 8:
-        out = _inflateCapped(raw, limit);
-      default:
-        throw const ReaderOpenException(ReaderFailure.unsupported);
-    }
-    _total += out.length;
-    return out;
-  }
-
-  Uint8List _inflateCapped(Uint8List raw, int limit) {
-    final sink = _CappedSink(limit);
-    final conv = io.ZLibDecoder(raw: true).startChunkedConversion(sink);
-    const chunk = 64 * 1024;
-    for (var i = 0; i < raw.length; i += chunk) {
-      budget?.check();
-      conv.add(Uint8List.sublistView(raw, i, i + chunk > raw.length ? raw.length : i + chunk));
-    }
-    conv.close();
-    return sink.builder.takeBytes();
-  }
-}
-
-class _CappedSink implements Sink<List<int>> {
-  _CappedSink(this.limit);
-  final int limit;
-  final builder = BytesBuilder(copy: false);
-  @override
-  void add(List<int> data) {
-    if (builder.length + data.length > limit) throw const _ZipBomb();
-    builder.add(data);
-  }
-
-  @override
-  void close() {}
-}
-
-// ---- XML helpers -----------------------------------------------------------
-
-String _local(String qname) {
-  final i = qname.indexOf(':');
-  return i < 0 ? qname : qname.substring(i + 1);
-}
-
-String? _attr(XmlStartElementEvent e, String local) {
-  for (final a in e.attributes) {
-    if (_local(a.name) == local) return a.value;
-  }
-  return null;
-}
-
-bool _onOff(XmlStartElementEvent e) {
-  final v = _attr(e, 'val')?.toLowerCase();
-  return v == null || !(v == '0' || v == 'false' || v == 'off' || v == 'none');
-}
-
-/// Pull-parses [xml]. DOCTYPE events are dropped (never interpreted).
-Iterable<XmlEvent> _events(String xml) => parseEvents(xml).where((e) => e is! XmlDoctypeEvent);
-
-Map<String, ({String target, bool external})> _parseRels(String? xml) {
-  final out = <String, ({String target, bool external})>{};
-  if (xml == null) return out;
-  for (final e in _events(xml)) {
-    if (e is XmlStartElementEvent && _local(e.name) == 'Relationship') {
-      final id = _attr(e, 'Id'), target = _attr(e, 'Target');
-      if (id == null || target == null) continue;
-      out[id] = (target: target, external: _attr(e, 'TargetMode')?.toLowerCase() == 'external');
-    }
-  }
-  return out;
 }
 
 class _Style {
@@ -197,25 +57,25 @@ class _Styles {
     if (xml == null) return _Styles(m);
     _Style? cur;
     var n = 0;
-    for (final e in _events(xml)) {
+    for (final e in xmlEvents(xml)) {
       if (++n % 4096 == 0) budget?.check();
       if (e is XmlStartElementEvent) {
-        switch (_local(e.name)) {
+        switch (xmlLocal(e.name)) {
           case 'style':
-            final id = _attr(e, 'styleId');
-            cur = (id != null && (_attr(e, 'type') ?? 'paragraph') == 'paragraph') ? (m[id] = _Style()) : null;
+            final id = xmlAttr(e, 'styleId');
+            cur = (id != null && (xmlAttr(e, 'type') ?? 'paragraph') == 'paragraph') ? (m[id] = _Style()) : null;
           case 'name':
-            cur?.name = _attr(e, 'val');
+            cur?.name = xmlAttr(e, 'val');
           case 'basedOn':
-            cur?.basedOn = _attr(e, 'val');
+            cur?.basedOn = xmlAttr(e, 'val');
           case 'outlineLvl':
-            cur?.outline = int.tryParse(_attr(e, 'val') ?? '');
+            cur?.outline = int.tryParse(xmlAttr(e, 'val') ?? '');
           case 'numId':
-            cur?.numId = _attr(e, 'val');
+            cur?.numId = xmlAttr(e, 'val');
           case 'ilvl':
-            cur?.ilvl = int.tryParse(_attr(e, 'val') ?? '');
+            cur?.ilvl = int.tryParse(xmlAttr(e, 'val') ?? '');
         }
-      } else if (e is XmlEndElementEvent && _local(e.name) == 'style') {
+      } else if (e is XmlEndElementEvent && xmlLocal(e.name) == 'style') {
         cur = null;
       }
     }
@@ -267,28 +127,28 @@ class _Numbering {
     var fmt = 'decimal';
     var start = 1;
     var n = 0;
-    for (final e in _events(xml)) {
+    for (final e in xmlEvents(xml)) {
       if (++n % 4096 == 0) budget?.check();
       if (e is XmlStartElementEvent) {
-        switch (_local(e.name)) {
+        switch (xmlLocal(e.name)) {
           case 'abstractNum':
-            abs = _attr(e, 'abstractNumId');
+            abs = xmlAttr(e, 'abstractNumId');
           case 'lvl':
-            lvl = int.tryParse(_attr(e, 'ilvl') ?? '');
+            lvl = int.tryParse(xmlAttr(e, 'ilvl') ?? '');
             fmt = 'decimal';
             start = 1;
           case 'numFmt':
-            fmt = _attr(e, 'val') ?? 'decimal';
+            fmt = xmlAttr(e, 'val') ?? 'decimal';
           case 'start':
-            start = int.tryParse(_attr(e, 'val') ?? '') ?? 1;
+            start = int.tryParse(xmlAttr(e, 'val') ?? '') ?? 1;
           case 'num':
-            num = _attr(e, 'numId');
+            num = xmlAttr(e, 'numId');
           case 'abstractNumId':
-            final v = _attr(e, 'val');
+            final v = xmlAttr(e, 'val');
             if (num != null && v != null) numTo[num] = v;
         }
       } else if (e is XmlEndElementEvent) {
-        switch (_local(e.name)) {
+        switch (xmlLocal(e.name)) {
           case 'lvl':
             if (abs != null && lvl != null) (fmts[abs] ??= {})[lvl] = (fmt: fmt, start: start);
             lvl = null;
@@ -346,13 +206,25 @@ class _Numbering {
 
 /// Elements whose whole subtree is ignored.
 const _skipped = {
-  'Fallback', 'instrText', 'delText', 'footnoteReference', 'endnoteReference', 'commentReference', 'txbxContent',
-  'sectPr', 'tblPr', 'tblGrid', 'trPr', 'tcPr', 'object', 'chart',
+  'Fallback',
+  'instrText',
+  'delText',
+  'footnoteReference',
+  'endnoteReference',
+  'commentReference',
+  'txbxContent',
+  'sectPr',
+  'tblPr',
+  'tblGrid',
+  'trPr',
+  'tcPr',
+  'object',
+  'chart',
 };
 
 class _DocxBody {
   _DocxBody(this.zip, this.styles, this.numbering, this.rels, this.limits, this.budget);
-  final _SafeZip zip;
+  final SafeZip zip;
   final _Styles styles;
   final _Numbering numbering;
   final Map<String, ({String target, bool external})> rels;
@@ -384,10 +256,10 @@ class _DocxBody {
   List<RBlock> parse(String xml) {
     var skip = 0;
     var n = 0;
-    for (final e in _events(xml)) {
+    for (final e in xmlEvents(xml)) {
       if (++n % 4096 == 0) budget?.check();
       if (e is XmlStartElementEvent) {
-        final name = _local(e.name);
+        final name = xmlLocal(e.name);
         if (skip > 0) {
           if (!e.isSelfClosing) skip++;
           continue;
@@ -403,7 +275,7 @@ class _DocxBody {
           skip--;
           continue;
         }
-        _end(_local(e.name));
+        _end(xmlLocal(e.name));
       } else if ((e is XmlTextEvent || e is XmlCDATAEvent) && skip == 0 && _inT && !_hidden && _drawing == 0) {
         _text(e is XmlTextEvent ? e.value : (e as XmlCDATAEvent).value);
       }
@@ -421,11 +293,11 @@ class _DocxBody {
     if (_drawing > 0) {
       switch (name) {
         case 'blip':
-          _imageRel ??= _attr(e, 'embed');
+          _imageRel ??= xmlAttr(e, 'embed');
         case 'imagedata':
-          _imageRel ??= _attr(e, 'id');
+          _imageRel ??= xmlAttr(e, 'id');
         case 'docPr':
-          _imageAlt ??= _attr(e, 'descr') ?? _attr(e, 'title');
+          _imageAlt ??= xmlAttr(e, 'descr') ?? xmlAttr(e, 'title');
       }
       if (name == 'drawing' || name == 'pict') _drawing++;
       return;
@@ -439,30 +311,30 @@ class _DocxBody {
       case 'pPr':
         _inPPr = true;
       case 'pStyle' when _inPPr:
-        _pStyle = _attr(e, 'val');
+        _pStyle = xmlAttr(e, 'val');
       case 'numId' when _inPPr:
-        _numId = _attr(e, 'val');
+        _numId = xmlAttr(e, 'val');
       case 'ilvl' when _inPPr:
-        _ilvl = int.tryParse(_attr(e, 'val') ?? '');
+        _ilvl = int.tryParse(xmlAttr(e, 'val') ?? '');
       case 'outlineLvl' when _inPPr:
-        _outline = int.tryParse(_attr(e, 'val') ?? '');
+        _outline = int.tryParse(xmlAttr(e, 'val') ?? '');
       case 'pageBreakBefore' when _inPPr:
-        _pageBreakBefore = _onOff(e);
+        _pageBreakBefore = xmlOnOff(e);
       case 'r':
         _inRun = true;
         _b = _i = _u = _s = _hidden = false;
       case 'rPr' when _inRun:
         _inRPr = true;
       case 'b' when _inRPr:
-        _b = _onOff(e);
+        _b = xmlOnOff(e);
       case 'i' when _inRPr:
-        _i = _onOff(e);
+        _i = xmlOnOff(e);
       case 'u' when _inRPr:
-        _u = _onOff(e);
+        _u = xmlOnOff(e);
       case ('strike' || 'dstrike') when _inRPr:
-        _s = _onOff(e);
+        _s = xmlOnOff(e);
       case 'vanish' when _inRPr:
-        _hidden = _onOff(e);
+        _hidden = xmlOnOff(e);
       case 't' when _inRun:
         _inT = true;
       case 'tab' when _inRun && !_inPPr:
@@ -472,13 +344,13 @@ class _DocxBody {
       case 'noBreakHyphen' when _inRun:
         _text('-');
       case 'br' when _inRun:
-        if (_attr(e, 'type') == 'page') {
+        if (xmlAttr(e, 'type') == 'page') {
           _pageBreak();
         } else {
           _text('\n');
         }
       case 'hyperlink':
-        final id = _attr(e, 'id');
+        final id = xmlAttr(e, 'id');
         final rel = id == null ? null : rels[id];
         _links.add(rel != null && rel.external ? rel.target : null);
       case 'drawing' || 'pict':
@@ -579,12 +451,14 @@ class _DocxBody {
       out.add(const TextBlock([]));
       return;
     }
-    out.add(TextBlock(
-      spans,
-      headingLevel: marker == null ? level : 0,
-      marker: (marker == null || marker.isEmpty) ? null : marker,
-      indent: marker == null ? 0 : (ilvl ?? 0).clamp(0, 8),
-    ));
+    out.add(
+      TextBlock(
+        spans,
+        headingLevel: marker == null ? level : 0,
+        marker: (marker == null || marker.isEmpty) ? null : marker,
+        indent: marker == null ? 0 : (ilvl ?? 0).clamp(0, 8),
+      ),
+    );
   }
 
   void _image() {
@@ -615,7 +489,7 @@ class _DocxBody {
     final Uint8List? bytes;
     try {
       bytes = zip.read(path, limits.maxImageBytes);
-    } on _ZipBomb {
+    } on ZipBomb {
       return ImageBlock(alt: alt);
     }
     if (bytes == null) return ImageBlock(alt: alt);

@@ -90,8 +90,10 @@
                 <data android:pathPattern=".*\\..*\\..*\\.PDF" />
             </intent-filter>
 
-            <!-- "Open with" for Word (.docx), Markdown and text files, shown
-                 read-only in the reader. text/* is VIEW only. -->
+            <!-- "Open with" for Word (.docx), Excel (.xlsx), CSV/TSV, Markdown and
+                 text files, shown read-only in the reader. text/* is VIEW only.
+                 Many apps label CSV as application/vnd.ms-excel; real .xls
+                 files are refused by the in-app sniff. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -102,6 +104,12 @@
                 <data android:mimeType="text/x-markdown" />
                 <data android:mimeType="text/plain" />
                 <data android:mimeType="text/*" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="text/tab-separated-values" />
+                <data android:mimeType="application/csv" />
+                <data android:mimeType="application/vnd.ms-excel" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -112,6 +120,12 @@
                 <data android:mimeType="text/x-markdown" />
                 <data android:mimeType="text/plain" />
                 <data android:mimeType="text/*" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="text/tab-separated-values" />
+                <data android:mimeType="application/csv" />
+                <data android:mimeType="application/vnd.ms-excel" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
             </intent-filter>
             <!-- Generic MIME type from file managers: match by extension. -->
             <intent-filter>
@@ -128,6 +142,11 @@
                 <data android:pathPattern=".*\\.markdown" />
                 <data android:pathPattern=".*\\.txt" />
                 <data android:pathPattern=".*\\..*\\.txt" />
+                <data android:pathPattern=".*\\.csv" />
+                <data android:pathPattern=".*\\..*\\.csv" />
+                <data android:pathPattern=".*\\.tsv" />
+                <data android:pathPattern=".*\\.xlsx" />
+                <data android:pathPattern=".*\\..*\\.xlsx" />
             </intent-filter>
 
             <!-- Share sheet. -->
@@ -139,6 +158,12 @@
                 <data android:mimeType="text/markdown" />
                 <data android:mimeType="text/x-markdown" />
                 <data android:mimeType="text/plain" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="text/tab-separated-values" />
+                <data android:mimeType="application/csv" />
+                <data android:mimeType="application/vnd.ms-excel" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
@@ -148,6 +173,12 @@
                 <data android:mimeType="text/markdown" />
                 <data android:mimeType="text/x-markdown" />
                 <data android:mimeType="text/plain" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="text/tab-separated-values" />
+                <data android:mimeType="application/csv" />
+                <data android:mimeType="application/vnd.ms-excel" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

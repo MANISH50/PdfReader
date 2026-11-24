@@ -35,5 +35,13 @@ abstract final class SecurityLimits {
   static const int maxDocxXmlBytes = 50 * 1024 * 1024;
   static const int maxDocxImageBytes = 20 * 1024 * 1024;
   static const int maxDocxTotalBytes = 150 * 1024 * 1024;
+  /// Spreadsheet caps (CSV/TSV/XLSX). Past a cap the sheet is cut short
+  /// and the reader says so.
+  static const int maxSheetRows = 100000;
+  static const int maxSheetColumns = 1000;
+  static const int maxSheetCells = 2000000;
+  static const int maxSheetCellChars = 32767;
+  static const int maxSheets = 100;
+
   static const Duration readerOpenTimeout = Duration(seconds: 15);
 }

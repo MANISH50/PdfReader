@@ -5,9 +5,11 @@ import 'dart:isolate';
 import '../../core/documents/document_kind.dart';
 import '../../core/models/document_ref.dart';
 import '../../core/security/limits.dart';
+import 'csv_parser.dart';
 import 'docx_parser.dart';
 import 'reader_model.dart';
 import 'text_markdown_parser.dart';
+import 'xlsx_parser.dart';
 
 /// Loads a document for the reader. Injectable for tests.
 typedef ReaderLoader = Future<ReaderDocument> Function(DocumentRef doc);
@@ -32,6 +34,11 @@ ReaderDocument parseReaderFile(String path, DocumentKind kind, String displayNam
         if (size > SecurityLimits.maxTextFileBytes) throw const ReaderOpenException(ReaderFailure.tooLarge);
         return parsePlainText(decodeTextFile(f.readAsBytesSync()),
             monospace: isCodeLikeName(displayName), budget: budget);
+      case DocumentKind.sheet:
+        if (_startsWithZip(f)) return parseXlsxFile(path, budget: budget);
+        if (size > SecurityLimits.maxTextFileBytes) throw const ReaderOpenException(ReaderFailure.tooLarge);
+        return parseDelimited(decodeTextFile(f.readAsBytesSync()),
+            name: displayName, extension: documentExtension(path, displayName: displayName), budget: budget);
       case DocumentKind.pdf:
         throw const ReaderOpenException(ReaderFailure.unsupported);
     }
@@ -53,5 +60,14 @@ Future<ReaderDocument> loadReaderDocument(DocumentRef doc) async {
     rethrow;
   } catch (_) {
     throw const ReaderOpenException(ReaderFailure.damaged);
+  }
+}
+
+bool _startsWithZip(File f) {
+  final raf = f.openSync();
+  try {
+    return hasZipMagic(raf.readSync(4));
+  } finally {
+    raf.closeSync();
   }
 }

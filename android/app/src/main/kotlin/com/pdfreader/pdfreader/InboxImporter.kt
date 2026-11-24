@@ -228,6 +228,9 @@ object FileNames {
             "application/pdf" -> "pdf"
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> "docx"
             "text/markdown", "text/x-markdown" -> "md"
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> "xlsx"
+            "text/csv", "text/comma-separated-values", "application/csv" -> "csv"
+            "text/tab-separated-values" -> "tsv"
             null -> return name
             else -> if (mime.startsWith("text/")) "txt" else return name
         }

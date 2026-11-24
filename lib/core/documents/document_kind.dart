@@ -7,7 +7,7 @@ import 'package:path/path.dart' as p;
 
 /// What kind of document a file is. PDFs open in the viewer; everything else
 /// opens in the read-only reader (features/reader).
-enum DocumentKind { pdf, docx, markdown, text }
+enum DocumentKind { pdf, docx, markdown, text, sheet }
 
 /// Bytes scanned for the `%PDF-` marker (same as the PDF service).
 const int kPdfHeaderScanBytes = 1024;
@@ -17,6 +17,12 @@ const int kTextSniffBytes = 64 * 1024;
 
 /// ZIP entries we look through for `word/document.xml` while sniffing.
 const int kMaxSniffZipEntries = 2000;
+
+/// Delimited-text extensions shown as a table.
+const delimitedExtensions = {'.csv', '.tsv', '.tab'};
+
+/// Macro-enabled Office files are never opened.
+const _macroExtensions = {'.docm', '.dotm', '.xlsm', '.xltm', '.xlam', '.xlsb'};
 
 const _markdownExtensions = {'.md', '.markdown', '.mdown', '.mkd', '.mkdn'};
 
@@ -53,7 +59,8 @@ bool hasZipMagic(List<int> head) =>
 /// Detects the kind of the file at [path]. Returns null for unsupported files.
 ///
 /// Order: `%PDF-` in the first 1024 bytes → pdf; ZIP with `word/document.xml`
-/// (central directory only, nothing is decompressed) → docx; Markdown
+/// (central directory only, nothing is decompressed) → docx; ZIP with
+/// `xl/workbook.xml` → sheet; `.csv`/`.tsv` text → sheet; Markdown
 /// extension → markdown; first 64 KiB decodes as text → text.
 Future<DocumentKind?> sniffDocumentKind(String path, {String? displayName}) async {
   final file = File(path);
@@ -74,29 +81,37 @@ Future<DocumentKind?> sniffDocumentKind(String path, {String? displayName}) asyn
   final ext = documentExtension(path, displayName: displayName);
   if (hasPdfMarker(head)) return DocumentKind.pdf;
   if (hasZipMagic(head)) {
-    // Macro-enabled Word files are never opened.
-    if (ext == '.docm' || ext == '.dotm') return null;
-    return zipHasWordDocument(path) ? DocumentKind.docx : null;
+    if (_macroExtensions.contains(ext)) return null;
+    return switch (zipOfficeKind(path)) {
+      'word/document.xml' => DocumentKind.docx,
+      'xl/workbook.xml' => DocumentKind.sheet,
+      _ => null,
+    };
   }
   if (!looksLikeText(head)) return null;
   if (_markdownExtensions.contains(ext)) return DocumentKind.markdown;
+  if (delimitedExtensions.contains(ext)) return DocumentKind.sheet;
   return DocumentKind.text;
 }
 
-/// Whether the ZIP at [path] has a `word/document.xml` entry. Reads only the
-/// central directory, at most [kMaxSniffZipEntries] entries.
-bool zipHasWordDocument(String path) {
+/// Whether the ZIP at [path] has a `word/document.xml` entry.
+bool zipHasWordDocument(String path) => zipOfficeKind(path) == 'word/document.xml';
+
+/// The main part of an Office ZIP at [path]: `word/document.xml` (Word) or
+/// `xl/workbook.xml` (Excel), else null. Reads only the central directory,
+/// at most [kMaxSniffZipEntries] entries.
+String? zipOfficeKind(String path) {
   InputFileStream? input;
   try {
     input = InputFileStream(path);
     var n = 0;
     for (final h in ZipDirectory().headers(input, files: false)) {
-      if (h.filename == 'word/document.xml') return true;
+      if (h.filename == 'word/document.xml' || h.filename == 'xl/workbook.xml') return h.filename;
       if (++n >= kMaxSniffZipEntries) break;
     }
-    return false;
+    return null;
   } catch (_) {
-    return false;
+    return null;
   } finally {
     try {
       input?.closeSync();

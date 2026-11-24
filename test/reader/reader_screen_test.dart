@@ -5,9 +5,11 @@ import 'package:pdfreader/app_router.dart';
 import 'package:pdfreader/core/documents/document_kind.dart';
 import 'package:pdfreader/core/models/document_ref.dart';
 import 'package:pdfreader/core/providers.dart';
+import 'package:pdfreader/features/reader/csv_parser.dart';
 import 'package:pdfreader/features/reader/docx_parser.dart';
 import 'package:pdfreader/features/reader/reader_model.dart';
 import 'package:pdfreader/features/reader/reader_screen.dart';
+import 'package:pdfreader/features/reader/sheet_view.dart';
 import 'package:pdfreader/features/reader/text_markdown_parser.dart';
 import 'package:pdfreader/ui/design_system/app_theme.dart';
 
@@ -32,23 +34,22 @@ Future<_Pumped> _pump(WidgetTester tester, DocumentRef doc, ReaderDocument Funct
   final store = MemoryJsonStore();
   final share = FakeShareService();
   final opened = <Uri>[];
-  await tester.pumpWidget(ProviderScope(
-    overrides: [
-      jsonStoreProvider.overrideWithValue(store),
-      shareServiceProvider.overrideWithValue(share),
-    ],
-    child: MaterialApp(
-      theme: AppTheme.light(),
-      home: ReaderScreen(
-        document: doc,
-        loader: (_) async => parse(),
-        urlOpener: (u) async {
-          opened.add(u);
-          return true;
-        },
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [jsonStoreProvider.overrideWithValue(store), shareServiceProvider.overrideWithValue(share)],
+      child: MaterialApp(
+        theme: AppTheme.light(),
+        home: ReaderScreen(
+          document: doc,
+          loader: (_) async => parse(),
+          urlOpener: (u) async {
+            opened.add(u);
+            return true;
+          },
+        ),
       ),
     ),
-  ));
+  );
   await tester.pumpAndSettle();
   return _Pumped(store, share, opened);
 }
@@ -175,8 +176,11 @@ let code = 1;
   });
 
   testWidgets('load failure shows a friendly message', (tester) async {
-    await _pump(tester, _ref('bad.docx', DocumentKind.docx),
-        () => throw const ReaderOpenException(ReaderFailure.unsafe));
+    await _pump(
+      tester,
+      _ref('bad.docx', DocumentKind.docx),
+      () => throw const ReaderOpenException(ReaderFailure.unsafe),
+    );
     expect(find.text('This file looks unsafe or too complex to open.'), findsOneWidget);
   });
 
@@ -185,5 +189,44 @@ let code = 1;
     for (final k in [DocumentKind.docx, DocumentKind.markdown, DocumentKind.text]) {
       expect(documentRouteFor(_ref('a', k)), Routes.reader);
     }
+  });
+
+  testWidgets('sheet: grid, tabs, cross-sheet search, tap cell to copy', (tester) async {
+    final csv = parseDelimited('Name,Qty\nApple,3\nPear,5\n').sheets!.single;
+    final doc = ReaderDocument(
+      kind: DocumentKind.sheet,
+      sheets: [
+        csv,
+        const SheetData(
+          name: 'Second',
+          rows: [
+            ['x', 'pear tree'],
+          ],
+          columnCount: 2,
+        ),
+      ],
+    );
+    await _pump(tester, _ref('fruit.xlsx', DocumentKind.sheet), () => doc);
+    expect(find.byType(SheetView), findsOneWidget);
+    expect(find.text('Name'), findsOneWidget);
+    expect(find.text('Apple'), findsOneWidget);
+    expect(find.text('B'), findsOneWidget); // column letter
+    expect(find.byKey(const Key('reader.sheetTabs')), findsOneWidget);
+
+    await _search(tester, 'pear');
+    expect(_count(tester), '1 of 2');
+    await tester.tap(find.byKey(const Key('reader.search.next')));
+    await tester.pumpAndSettle();
+    expect(_count(tester), '2 of 2');
+    expect(find.text('pear tree'), findsOneWidget); // switched to the second sheet
+    await tester.tap(find.byKey(const Key('reader.search.close')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('reader.sheetTab.0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Apple'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('reader.cell.text')), findsOneWidget);
+    expect(find.text('A2'), findsOneWidget);
   });
 }
