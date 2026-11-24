@@ -95,8 +95,30 @@ class RecentsNotifier extends AsyncNotifier<List<RecentEntry>> {
 final recentsProvider = AsyncNotifierProvider<RecentsNotifier, List<RecentEntry>>(RecentsNotifier.new);
 
 /// Case-insensitive filter by file name.
-List<RecentEntry> filterRecents(List<RecentEntry> all, String query) {
+List<RecentEntry> filterRecents(List<RecentEntry> all, String query, {RecentFilter filter = RecentFilter.all}) {
   final q = query.trim().toLowerCase();
-  if (q.isEmpty) return all;
-  return [for (final e in all) if (e.doc.displayName.toLowerCase().contains(q)) e];
+  if (q.isEmpty && filter == RecentFilter.all) return all;
+  return [
+    for (final e in all)
+      if ((q.isEmpty || e.doc.displayName.toLowerCase().contains(q)) && filter.matches(e.tileData.badge)) e,
+  ];
+}
+
+/// File-type filter chips on Home.
+enum RecentFilter {
+  all('All', {}),
+  pdf('PDF', {'PDF'}),
+  word('Word', {'DOC'}),
+  sheets('Sheets', {'XLS', 'CSV'}),
+  markdown('Markdown', {'MD'}),
+  text('Text', {'TXT'});
+
+  const RecentFilter(this.label, this.badges);
+  final String label;
+  final Set<String> badges;
+
+  bool matches(String badge) => this == all || badges.contains(badge);
+
+  /// Badge whose colour/icon represents this filter.
+  String get badge => badges.isEmpty ? '' : badges.first;
 }

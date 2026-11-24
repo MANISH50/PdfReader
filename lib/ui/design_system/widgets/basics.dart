@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../adaptive.dart';
 import '../tokens.dart';
+import 'fancy.dart';
 
 /// Page scaffold with a large collapsing title and sliver body. Content is
 /// centred in a readable column on wide windows (see [contentGutter]).
@@ -16,7 +17,15 @@ class AppScaffold extends StatelessWidget {
     this.largeTitle = true,
     this.maxContentWidth = kMaxContentWidth,
     this.bottom,
+    this.gradientHeader = false,
+    this.subtitle,
   });
+
+  /// Show the title in a big brand-gradient header instead of an app bar.
+  final bool gradientHeader;
+
+  /// Line under the title in the gradient header.
+  final String? subtitle;
 
   final String title;
   final List<Widget> slivers;
@@ -32,15 +41,55 @@ class AppScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final gutter = contentGutter(context, maxWidth: maxContentWidth);
     final titleWidget = Text(title, maxLines: 1, overflow: TextOverflow.ellipsis);
-    final appBar = largeTitle
+    final Widget appBar;
+    if (gradientHeader) {
+      final t = Theme.of(context);
+      final canPop = ModalRoute.of(context)?.canPop ?? false;
+      appBar = SliverToBoxAdapter(
+        child: GradientHeader(
+          bottomPadding: Space.lg,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(canPop ? Space.xs : gutter, Space.xs, Space.sm, 0),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                if (canPop) const BackButton(color: Colors.white),
+                const Spacer(),
+                ...actions,
+              ]),
+              Padding(
+                padding: EdgeInsets.only(left: canPop ? gutter - Space.xs : 0, top: Space.sm),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: t.textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+              if (subtitle != null)
+                Padding(
+                  padding: EdgeInsets.only(left: canPop ? gutter - Space.xs : 0, top: Space.xxs),
+                  child: Text(subtitle!, style: t.textTheme.bodyMedium?.copyWith(color: Colors.white)),
+                ),
+            ]),
+          ),
+        ),
+      );
+    } else {
+      appBar = largeTitle
         ? SliverAppBar.large(title: titleWidget, actions: actions, bottom: bottom)
         : SliverAppBar(pinned: true, title: titleWidget, actions: actions, bottom: bottom);
+    }
     return Scaffold(
       floatingActionButton: floatingActionButton,
       body: CustomScrollView(
         slivers: [
           appBar,
-          for (final s in slivers) SliverPadding(padding: EdgeInsets.symmetric(horizontal: gutter), sliver: s),
+          for (final s in slivers)
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: gutter),
+              sliver: s,
+            ),
           const SliverPadding(padding: EdgeInsets.only(bottom: Space.xxl + Space.xxl)),
         ],
       ),
@@ -80,14 +129,7 @@ class SectionHeader extends StatelessWidget {
 
 /// Friendly placeholder for empty lists: icon badge, title, body, action.
 class EmptyState extends StatelessWidget {
-  const EmptyState({
-    super.key,
-    required this.icon,
-    required this.title,
-    this.message,
-    this.action,
-    this.illustration,
-  });
+  const EmptyState({super.key, required this.icon, required this.title, this.message, this.action, this.illustration});
 
   final IconData icon;
   final String title;
@@ -175,10 +217,7 @@ class PrimaryButton extends StatelessWidget {
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (busy)
-          AdaptiveProgress(size: 18, color: s.onPrimary)
-        else if (icon != null)
-          Icon(icon, size: 20),
+        if (busy) AdaptiveProgress(size: 18, color: s.onPrimary) else if (icon != null) Icon(icon, size: 20),
         if (busy || icon != null) const SizedBox(width: Space.sm),
         Flexible(child: Text(label, textAlign: TextAlign.center)),
       ],
@@ -191,10 +230,42 @@ class PrimaryButton extends StatelessWidget {
             onPressed: enabled ? onPressed : null,
             child: DefaultTextStyle.merge(
               style: TextStyle(color: s.onPrimary, fontWeight: FontWeight.w600),
-              child: IconTheme.merge(data: IconThemeData(color: s.onPrimary), child: content),
+              child: IconTheme.merge(
+                data: IconThemeData(color: s.onPrimary),
+                child: content,
+              ),
             ),
           )
-        : FilledButton(onPressed: enabled ? onPressed : null, child: content);
+        : AnimatedOpacity(
+            opacity: enabled || busy ? 1 : 0.5,
+            duration: Motion.of(context, Motion.fast),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: Radii.card,
+                gradient: Brand.gradient(s.brightness, begin: Alignment.centerLeft, end: Alignment.centerRight),
+                boxShadow: enabled
+                    ? [
+                        BoxShadow(
+                          color: Brand.gradientColors[1].withValues(alpha: 0.30),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  disabledBackgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.white,
+                  shadowColor: Colors.transparent,
+                ),
+                onPressed: enabled ? onPressed : null,
+                child: content,
+              ),
+            ),
+          );
     return Semantics(
       button: true,
       enabled: enabled,
@@ -229,7 +300,10 @@ class PageDots extends StatelessWidget {
                 width: i == index ? 24 : 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: i == index ? s.primary : s.outlineVariant,
+                  color: i == index ? null : s.outlineVariant,
+                  gradient: i == index
+                      ? Brand.gradient(s.brightness, begin: Alignment.centerLeft, end: Alignment.centerRight)
+                      : null,
                   borderRadius: Radii.pill,
                 ),
               ),
@@ -250,14 +324,14 @@ class SliverFillOrFit extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SliverLayoutBuilder(
-        builder: (context, c) {
-          final rest = c.viewportMainAxisExtent - c.precedingScrollExtent;
-          return SliverToBoxAdapter(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: rest > 0 ? rest : 0),
-              child: Center(child: child),
-            ),
-          );
-        },
+    builder: (context, c) {
+      final rest = c.viewportMainAxisExtent - c.precedingScrollExtent;
+      return SliverToBoxAdapter(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: rest > 0 ? rest : 0),
+          child: Center(child: child),
+        ),
       );
+    },
+  );
 }

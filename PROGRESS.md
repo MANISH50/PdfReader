@@ -26,6 +26,8 @@ Feature work is on per-agent branches; paused agents keep their work and resume 
 3. Lead does small fixes and integration (wiring, keys, conflicts) itself.
 4. One independent security review agent at the end, plus CI on GitHub Actions for emulator/iOS tests.
 
+- **v1.0.3**: Excel (.xlsx) and CSV/TSV open as tables (`csv_parser.dart`, `xlsx_parser.dart`, `sheet_view.dart`; ZIP hardening shared with DOCX in `safe_zip.dart`). UI refresh: brand gradient (indigo → violet → pink) header, quick actions and file-type filter chips on Home, colour-coded file badges, gradient buttons/FAB, floating glass toolbars in viewer and reader, gradient Settings header, new app icon.
+
 ## Next
 - Final security check (lead): done — links confirm-only, release manifest has no network/storage permissions, backups off.
 - Signed release APK/AAB build → publish GitHub Release after owner OK.

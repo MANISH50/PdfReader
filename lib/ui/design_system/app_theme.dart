@@ -74,7 +74,7 @@ abstract final class AppTheme {
         margin: EdgeInsets.zero,
         color: s.surfaceContainerLow,
         shape: RoundedRectangleBorder(
-          borderRadius: Radii.card,
+          borderRadius: const BorderRadius.all(Radius.circular(Radii.lg - 4)),
           side: BorderSide(color: s.outlineVariant.withValues(alpha: highContrast ? 1 : 0.5)),
         ),
         clipBehavior: Clip.antiAlias,
@@ -122,7 +122,14 @@ abstract final class AppTheme {
         backgroundColor: s.primary,
         foregroundColor: s.onPrimary,
         extendedTextStyle: text.labelLarge?.copyWith(fontSize: 16),
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Radii.lg))),
+        shape: const StadiumBorder(),
+      ),
+      chipTheme: ChipThemeData(
+        shape: const StadiumBorder(),
+        side: BorderSide(color: s.outlineVariant.withValues(alpha: 0.6)),
+        selectedColor: s.primaryContainer,
+        labelStyle: text.labelLarge,
+        padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: Space.xs),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(

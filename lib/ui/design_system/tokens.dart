@@ -51,10 +51,61 @@ abstract final class Brand {
   /// Paper white used for the document sheet in the logo.
   static const Color paper = Color(0xFFFFFFFF);
 
+  /// Signature gradient: indigo → violet → pink (headers, primary buttons,
+  /// FAB, app icon). White text on it is ≥ 4.5:1 across the whole sweep.
+  static const List<Color> gradientColors = [Color(0xFF3B5BDB), Color(0xFF7C3AED), Color(0xFFDB2777)];
+  static const List<Color> gradientColorsDark = [Color(0xFF2A3FA6), Color(0xFF5B21B6), Color(0xFF9D174D)];
+
+  static LinearGradient gradient(
+    Brightness b, {
+    AlignmentGeometry begin = Alignment.topLeft,
+    AlignmentGeometry end = Alignment.bottomRight,
+  }) => LinearGradient(begin: begin, end: end, colors: b == Brightness.dark ? gradientColorsDark : gradientColors);
+
   /// Splash backgrounds (keep in sync with pubspec flutter_native_splash).
   static const Color splashLight = Color(0xFFF6F7FB);
   static const Color splashDark = Color(0xFF0F1115);
 }
+
+/// Colour and icon per file type (recents badges, filter chips).
+abstract final class FileTypeStyle {
+  static const pdf = Color(0xFFE5484D);
+  static const word = Color(0xFF2F6FED);
+  static const excel = Color(0xFF16A34A);
+  static const csv = Color(0xFF0D9488);
+  static const markdown = Color(0xFF8B5CF6);
+  static const text = Color(0xFF64748B);
+
+  /// Colour for a badge label (PDF, DOC, XLS, CSV, MD, TXT).
+  static Color color(String badge) => switch (badge) {
+    'PDF' => pdf,
+    'DOC' => word,
+    'XLS' => excel,
+    'CSV' => csv,
+    'MD' => markdown,
+    _ => text,
+  };
+
+  static IconData icon(String badge) => switch (badge) {
+    'PDF' => Icons.picture_as_pdf_rounded,
+    'DOC' => Icons.article_rounded,
+    'XLS' => Icons.grid_on_rounded,
+    'CSV' => Icons.table_rows_rounded,
+    'MD' => Icons.tag_rounded,
+    _ => Icons.notes_rounded,
+  };
+}
+
+/// Soft, tinted shadow used by cards and floating bars.
+List<BoxShadow> softShadow(ColorScheme s, {double strength = 1}) => [
+  BoxShadow(
+    color: (s.brightness == Brightness.dark ? Colors.black : s.primary).withValues(
+      alpha: (s.brightness == Brightness.dark ? 0.35 : 0.10) * strength,
+    ),
+    blurRadius: 18,
+    offset: const Offset(0, 6),
+  ),
+];
 
 /// Breakpoints for adaptive layouts.
 enum WindowSize { compact, medium, expanded }

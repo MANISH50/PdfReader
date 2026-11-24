@@ -51,7 +51,8 @@ Step-by-step help for both phones is in **[INSTALL.md](INSTALL.md)**.
 - Search inside the document. Select and copy text.
 - Links inside the document. Back and forward after you follow a link.
 - Opens password-protected PDFs.
-- Also opens Word (.docx), Markdown (.md) and plain-text files (.txt, logs, CSV, JSON, code) for reading — offline, with search, text size and page colours.
+- Also opens Word (.docx), Markdown (.md) and plain-text files (.txt, logs, JSON, code) for reading — offline, with search, text size and page colours.
+- Opens Excel workbooks (.xlsx) and CSV/TSV files as a scrollable table: sheet tabs, sticky header row, row numbers, search across sheets, tap a cell to copy it. Cell values only (formulas show their last saved result; charts and pictures are not shown). Old .xls files are not supported.
 - Light, dark, sepia and inverted page colours.
 - Remembers your last page and zoom for each file.
 

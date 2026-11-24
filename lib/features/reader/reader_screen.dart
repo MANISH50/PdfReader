@@ -15,6 +15,7 @@ import '../../core/providers.dart';
 import '../../core/security/link_policy.dart';
 import '../../ui/design_system/adaptive.dart';
 import '../../ui/design_system/tokens.dart';
+import '../../ui/design_system/widgets/fancy.dart' show GlassBar;
 import '../viewer/viewer_dialogs.dart' show confirmExternalLink;
 import 'block_view.dart';
 import 'reader_loader.dart';
@@ -195,7 +196,7 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
   /// Brings block [index] into view. Items are built lazily with unknown
   /// heights, so jump by estimate until the item is built, then align it.
   Future<void> _scrollToBlock(int index, {double alignment = 0.3}) async {
-    final topInset = MediaQuery.paddingOf(context).top + kToolbarHeight;
+    final topInset = _topInset;
     for (var attempt = 0; attempt < 16 && mounted && _scroll.hasClients; attempt++) {
       final ctx = _built[index];
       if (ctx != null && ctx.mounted) {
@@ -488,7 +489,7 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
     final doc = _doc;
     final style = ReaderStyle.of(theme, fontScale: _fontScale, monospace: doc?.monospace ?? false);
     final mq = MediaQuery.of(context);
-    final barHeight = mq.padding.top + kToolbarHeight;
+    final barHeight = mq.padding.top + kToolbarHeight + Space.sm + 4;
     _topInset = barHeight;
     final dark = theme == PageTheme.dark || theme == PageTheme.night;
 
@@ -518,7 +519,15 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
             left: 0,
             right: 0,
             top: _chrome ? 0 : -barHeight - 4,
-            child: _appBar(style, theme, dark),
+            child: SafeArea(
+              bottom: false,
+              minimum: const EdgeInsets.fromLTRB(Space.sm + 2, Space.xs + 2, Space.sm + 2, 0),
+              child: GlassBar(
+                color: style.background,
+                borderColor: style.foreground,
+                child: MediaQuery.removePadding(context: context, removeTop: true, child: _appBar(style, theme, dark)),
+              ),
+            ),
           ),
         ]),
       ),
@@ -672,12 +681,11 @@ class ReaderScreenState extends ConsumerState<ReaderScreen> {
     final fg = style.foreground;
     return AppBar(
       key: const Key('reader.appBar'),
-      backgroundColor: style.background.withValues(alpha: 0.97),
+      backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       foregroundColor: fg,
       elevation: 0,
       scrolledUnderElevation: 0,
-      shape: Border(bottom: BorderSide(color: style.border.withValues(alpha: 0.5), width: 0.5)),
       iconTheme: IconThemeData(color: fg),
       actionsIconTheme: IconThemeData(color: fg),
       titleTextStyle: Theme.of(context).textTheme.titleMedium?.copyWith(color: fg, fontWeight: FontWeight.w600),

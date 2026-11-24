@@ -55,7 +55,7 @@ class AppLogoPainter extends CustomPainter {
           ..shader = const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF4A6AE6), Brand.seedDeep],
+            colors: Brand.gradientColors,
           ).createShader(rect),
       );
     }

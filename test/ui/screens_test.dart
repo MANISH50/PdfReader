@@ -188,6 +188,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(saved().defaultReadingMode, ReadingMode.twoPage);
 
+      await tester.ensureVisible(find.text('Keep screen on'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Keep screen on'));
       await tester.pumpAndSettle();
       expect(saved().keepScreenOn, isFalse);
@@ -222,6 +224,8 @@ void main() {
       final h = Harness();
       await h.pump(tester, Routes.settings);
       await tester.scrollUntilVisible(find.text('Open-source licenses'), 200);
+      await tester.ensureVisible(find.text('Open-source licenses'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Open-source licenses'));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));

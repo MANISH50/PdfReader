@@ -64,6 +64,12 @@ Every PDF is treated as untrusted. PdfReader has hard limits (`lib/core/security
 | Most files in one merge | 50 |
 
 If a file goes over a limit, PdfReader stops that work and shows a message. It does not freeze or crash.
+
+Word (.docx) and Excel (.xlsx) files are ZIP archives and get the same extra checks: at most 2,000 entries, no `..` or
+absolute paths, no encrypted entries, every part unpacked with a hard size cap (so a "zip bomb" that lies about its size is
+stopped), XML read without DOCTYPEs or external entities, and a 15-second time limit. Macro files (.docm, .xlsm, .xlsb) are
+refused and macros are never read. Spreadsheets are capped at 100,000 rows, 1,000 columns, 2 million cells and 100 sheets;
+bigger sheets are cut short with a note.
 One bad page does not stop you from reading the other pages.
 
 ### Your originals are safe

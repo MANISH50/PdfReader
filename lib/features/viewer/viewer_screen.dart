@@ -43,6 +43,7 @@ import '../../core/providers.dart';
 import '../../core/security/link_policy.dart';
 import '../../ui/design_system/reading_theme.dart';
 import '../../ui/design_system/tokens.dart';
+import '../../ui/design_system/widgets/fancy.dart' show GlassBar;
 import 'reflow_view.dart';
 import 'viewer_dialogs.dart';
 import 'viewer_hooks.dart';
@@ -680,7 +681,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
             top: 0,
             child: slot(
               offset: const Offset(0, -1),
-              child: () => _searchOpen ? _buildSearchBar() : _buildAppBar(),
+              child: () => _floatingTop(_searchOpen ? _buildSearchBar() : _buildAppBar()),
             ),
           ),
           Positioned(
@@ -926,12 +927,14 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
         final count = _s.pageCount;
         final page = _s.page;
         final shown = (scrub ?? page.toDouble()).round();
-        return Material(
-          elevation: 3,
-          color: Theme.of(context).colorScheme.surfaceContainer,
-          child: SafeArea(
-            top: false,
-            child: Padding(
+        return SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(Space.sm + 2, 0, Space.sm + 2, Space.sm + 2),
+          child: GlassBar(
+            color: Theme.of(context).colorScheme.surfaceContainer,
+            child: Material(
+              type: MaterialType.transparency,
+              child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: Space.xs),
               child: Row(
                 children: [
@@ -972,9 +975,20 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
                         child: Center(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: Space.sm),
-                            child: Text('$shown / $count',
-                                key: const Key('viewer.pageIndicator'),
-                                style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: Space.sm + 4, vertical: Space.xs + 1),
+                              decoration: BoxDecoration(
+                                borderRadius: Radii.pill,
+                                gradient: Brand.gradient(Theme.of(context).brightness,
+                                    begin: Alignment.centerLeft, end: Alignment.centerRight),
+                              ),
+                              child: Text('$shown / $count',
+                                  key: const Key('viewer.pageIndicator'),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontFeatures: [FontFeature.tabularFigures()])),
+                            ),
                           ),
                         ),
                       ),
@@ -983,9 +997,28 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> with WidgetsBinding
                 ],
               ),
             ),
+            ),
           ),
         );
       },
+    );
+  }
+
+  /// Floating frosted top bar with rounded corners (status bar stays clear).
+  Widget _floatingTop(Widget bar) {
+    final t = Theme.of(context);
+    return SafeArea(
+      bottom: false,
+      minimum: const EdgeInsets.fromLTRB(Space.sm + 2, Space.xs + 2, Space.sm + 2, 0),
+      child: GlassBar(
+        color: t.colorScheme.surfaceContainer,
+        child: Theme(
+          data: t.copyWith(
+            appBarTheme: t.appBarTheme.copyWith(backgroundColor: Colors.transparent, surfaceTintColor: Colors.transparent),
+          ),
+          child: MediaQuery.removePadding(context: context, removeTop: true, child: bar),
+        ),
+      ),
     );
   }
 }

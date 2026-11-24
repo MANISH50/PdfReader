@@ -71,9 +71,9 @@ class DocumentTileData {
   String get semanticsLabel => [name, metaLine, if (page != null) pageLabel].join(', ');
 }
 
-/// Thumbnail placeholder: a tinted paper sheet with a folded corner and a
-/// "PDF" badge; colour is derived from the document id so each file keeps a
-/// stable look. Pass [thumbnail] to show a rendered first page instead.
+/// Thumbnail placeholder: a sheet in the file type's colour (red PDF, blue
+/// Word, green Excel…) with a folded corner, the type icon and its label.
+/// Pass [thumbnail] to show a rendered first page instead.
 class DocumentThumb extends StatelessWidget {
   const DocumentThumb({super.key, required this.id, this.thumbnail, this.width = 48, this.badge = 'PDF'});
   final String id;
@@ -81,26 +81,26 @@ class DocumentThumb extends StatelessWidget {
   final Widget? thumbnail;
   final double width;
 
-  static const _hues = [228.0, 200.0, 262.0, 170.0, 20.0, 330.0];
-
   @override
   Widget build(BuildContext context) {
-    final s = Theme.of(context).colorScheme;
-    final dark = s.brightness == Brightness.dark;
-    final hue = _hues[id.hashCode.abs() % _hues.length];
-    final tint = HSLColor.fromAHSL(1, hue, 0.55, dark ? 0.32 : 0.9).toColor();
-    final ink = HSLColor.fromAHSL(1, hue, 0.5, dark ? 0.8 : 0.4).toColor();
+    final base = FileTypeStyle.color(badge);
     return Hero(
       tag: 'doc-thumb-$id',
       child: SizedBox(
         width: width,
         height: width * 1.3,
         child: ClipRRect(
-          borderRadius: Radii.tile,
+          borderRadius: BorderRadius.circular(width * 0.2),
           child:
               thumbnail ??
               DecoratedBox(
-                decoration: BoxDecoration(color: tint),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color.lerp(base, Colors.white, 0.22)!, base],
+                  ),
+                ),
                 child: LayoutBuilder(
                   builder: (context, c) {
                     final w = c.maxWidth;
@@ -110,38 +110,31 @@ class DocumentThumb extends StatelessWidget {
                           right: 0,
                           top: 0,
                           child: Container(
-                            width: w * 0.28,
-                            height: w * 0.28,
+                            width: w * 0.3,
+                            height: w * 0.3,
                             decoration: BoxDecoration(
-                              color: ink.withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(w * 0.08)),
+                              color: Colors.white.withValues(alpha: 0.28),
+                              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(w * 0.1)),
                             ),
                           ),
                         ),
-                        for (var i = 0; i < 3; i++)
-                          Positioned(
-                            left: w * 0.18,
-                            right: w * (i == 2 ? 0.45 : 0.22),
-                            top: w * (0.42 + i * 0.16),
-                            child: Container(
-                              height: (w * 0.06).clamp(2, 8),
-                              decoration: BoxDecoration(color: ink.withValues(alpha: 0.35), borderRadius: Radii.pill),
-                            ),
-                          ),
+                        Align(
+                          alignment: const Alignment(0, -0.25),
+                          child: Icon(FileTypeStyle.icon(badge), color: Colors.white, size: w * 0.46),
+                        ),
                         Positioned(
-                          left: w * 0.12,
+                          left: 0,
+                          right: 0,
                           bottom: w * 0.1,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: w * 0.06, vertical: w * 0.02),
-                            decoration: BoxDecoration(color: ink, borderRadius: Radii.pill),
+                          child: Center(
                             child: Text(
                               badge,
                               textScaler: TextScaler.noScaling,
                               style: TextStyle(
-                                color: tint,
-                                fontSize: (w * 0.16).clamp(7, 20),
+                                color: Colors.white,
+                                fontSize: (w * 0.2).clamp(7, 22),
                                 fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
+                                letterSpacing: 0.8,
                               ),
                             ),
                           ),
@@ -179,56 +172,65 @@ class DocumentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final s = t.colorScheme;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: Radii.card,
-      clipBehavior: Clip.antiAlias,
-      child: Row(
-        children: [
-          Expanded(
-            child: InkWell(
-              onTap: onTap,
-              child: Semantics(
-                button: true,
-                label: data.semanticsLabel,
-                hint: semanticHint,
-                excludeSemantics: true,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: Space.sm + 2),
-                  child: Row(
-                    children: [
-                      DocumentThumb(id: data.id, thumbnail: thumbnail, width: 48, badge: data.badge),
-                      const SizedBox(width: Space.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              data.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: t.textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: Space.xxs),
-                            Text(
-                              data.metaLine,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: t.textTheme.bodySmall?.copyWith(color: s.onSurfaceVariant),
-                            ),
-                            if (data.page != null) ...[const SizedBox(height: Space.xs + 2), _Progress(data: data)],
-                          ],
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: Space.xs + 1),
+      decoration: BoxDecoration(
+        color: s.surfaceContainerLow,
+        borderRadius: const BorderRadius.all(Radius.circular(Radii.lg - 4)),
+        border: Border.all(color: s.outlineVariant.withValues(alpha: 0.35)),
+        boxShadow: softShadow(s, strength: 0.7),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: const BorderRadius.all(Radius.circular(Radii.lg - 4)),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: onTap,
+                child: Semantics(
+                  button: true,
+                  label: data.semanticsLabel,
+                  hint: semanticHint,
+                  excludeSemantics: true,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: Space.sm + 2),
+                    child: Row(
+                      children: [
+                        DocumentThumb(id: data.id, thumbnail: thumbnail, width: 48, badge: data.badge),
+                        const SizedBox(width: Space.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                data.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: t.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: Space.xxs),
+                              Text(
+                                data.metaLine,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: t.textTheme.bodySmall?.copyWith(color: s.onSurfaceVariant),
+                              ),
+                              if (data.page != null) ...[const SizedBox(height: Space.xs + 2), _Progress(data: data)],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          ?trailing,
-        ],
+            ?trailing,
+          ],
+        ),
       ),
     );
   }

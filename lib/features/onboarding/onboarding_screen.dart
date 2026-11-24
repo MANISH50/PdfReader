@@ -98,6 +98,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       (Icons.contrast_rounded, 'Light, sepia, dark and night page themes'),
                       (Icons.bookmark_border_rounded, 'Picks up right where you left off'),
                       (Icons.manage_search_rounded, 'Search, outline, thumbnails and bookmarks'),
+                      (Icons.folder_open_rounded, 'Also opens Word, Excel, CSV, Markdown and text files'),
                     ],
                   ),
                   _OnboardingPage(
@@ -196,19 +197,12 @@ class _OnboardingPage extends StatelessWidget {
                     ),
                   ],
                   if (points.isNotEmpty) const SizedBox(height: Space.xl),
-                  for (final (icon, text) in points)
+                  for (final (i, (icon, text)) in points.indexed)
                     Padding(
                       padding: const EdgeInsets.only(bottom: Space.md),
                       child: Row(
                         children: [
-                          ExcludeSemantics(
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(color: s.primaryContainer, borderRadius: Radii.tile),
-                              child: Icon(icon, size: 22, color: s.onPrimaryContainer),
-                            ),
-                          ),
+                          IconBadge(icon, color: _pointColors[i % _pointColors.length], size: 42),
                           const SizedBox(width: Space.md),
                           Expanded(child: Text(text, style: t.textTheme.bodyLarge)),
                         ],
@@ -226,6 +220,14 @@ class _OnboardingPage extends StatelessWidget {
   }
 }
 
+const _pointColors = [
+  Color(0xFF3B5BDB),
+  Color(0xFF7C3AED),
+  Color(0xFFDB2777),
+  Color(0xFF0D9488),
+  Color(0xFFF59E0B),
+];
+
 class _IconHero extends StatelessWidget {
   const _IconHero({required this.icon});
   final IconData icon;
@@ -235,17 +237,25 @@ class _IconHero extends StatelessWidget {
     final s = Theme.of(context).colorScheme;
     return ExcludeSemantics(
       child: Container(
-        width: 112,
-        height: 112,
+        width: 120,
+        height: 120,
         decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(32)),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [s.primaryContainer, s.tertiaryContainer],
-          ),
+          borderRadius: const BorderRadius.all(Radius.circular(36)),
+          gradient: Brand.gradient(s.brightness),
+          boxShadow: [BoxShadow(color: Brand.gradientColors[1].withValues(alpha: 0.4), blurRadius: 30, offset: const Offset(0, 12))],
         ),
-        child: Icon(icon, size: 52, color: s.onPrimaryContainer),
+        child: Stack(alignment: Alignment.center, children: [
+          Positioned(
+            right: -18,
+            top: -18,
+            child: Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.14)),
+            ),
+          ),
+          Icon(icon, size: 56, color: Colors.white),
+        ]),
       ),
     );
   }

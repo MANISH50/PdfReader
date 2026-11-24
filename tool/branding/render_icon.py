@@ -25,8 +25,8 @@ from PIL import Image, ImageDraw
 SS = 4  # supersampling factor for antialiasing
 OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'branding')
 
-BG_TOP = (0x4A, 0x6A, 0xE6)
-BG_BOTTOM = (0x2A, 0x3F, 0xA6)
+# Brand gradient (keep in sync with Brand.gradientColors in tokens.dart).
+BG_STOPS = [(0x3B, 0x5B, 0xDB), (0x7C, 0x3A, 0xED), (0xDB, 0x27, 0x77)]
 PAPER = (255, 255, 255, 255)
 FOLD = (0xDC, 0xE3, 0xFB, 255)
 LINE = (0xC5, 0xCE, 0xF2, 255)
@@ -47,8 +47,11 @@ def gradient(size: int) -> Image.Image:
     px = small.load()
     for y in range(256):
         for x in range(256):
-            t = (x + y) / 510
-            px[x, y] = tuple(round(a + (b - a) * t) for a, b in zip(BG_TOP, BG_BOTTOM))
+            t = (x + y) / 510 * (len(BG_STOPS) - 1)
+            i = min(int(t), len(BG_STOPS) - 2)
+            f = t - i
+            a, b = BG_STOPS[i], BG_STOPS[i + 1]
+            px[x, y] = tuple(round(u + (v - u) * f) for u, v in zip(a, b))
     return small.resize((size, size), Image.BICUBIC).convert('RGBA')
 
 

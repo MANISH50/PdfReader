@@ -83,6 +83,8 @@ class SettingsScreen extends ConsumerWidget {
 
     return AppScaffold(
       title: 'Settings',
+      gradientHeader: true,
+      subtitle: 'Offline · No ads · No tracking',
       slivers: [
         SliverList.list(children: [
           const SectionHeader('Appearance'),
@@ -120,7 +122,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const Divider(indent: Space.md, endIndent: Space.md),
             ListTile(
-              leading: const Icon(Icons.view_agenda_outlined),
+              leading: const IconBadge(Icons.view_agenda_outlined, color: Color(0xFF3B82F6)),
               title: const Text('Default reading mode'),
               subtitle: Text(readingModeLabel(settings.defaultReadingMode)),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -128,7 +130,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             MergeSemantics(
               child: ListTile(
-                leading: const Icon(Icons.light_mode_outlined),
+                leading: const IconBadge(Icons.light_mode_outlined, color: Color(0xFFF59E0B)),
                 title: const Text('Keep screen on'),
                 subtitle: const Text('While a document is open'),
                 trailing: AdaptiveSwitch(
@@ -146,7 +148,7 @@ class SettingsScreen extends ConsumerWidget {
           const SectionHeader('Opening PDFs'),
           _Group(children: [
             ListTile(
-              leading: const Icon(Icons.open_in_new_rounded),
+              leading: const IconBadge(Icons.open_in_new_rounded, color: Color(0xFF7C3AED)),
               title: const Text('How to open PDFs with PdfReader'),
               subtitle: const Text('Make it your PDF app'),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -156,13 +158,13 @@ class SettingsScreen extends ConsumerWidget {
           const SectionHeader('Storage'),
           _Group(children: [
             ListTile(
-              leading: const Icon(Icons.history_rounded),
+              leading: const IconBadge(Icons.history_rounded, color: Color(0xFF0D9488)),
               title: const Text('Clear recent files'),
               subtitle: const Text('Your PDFs are not deleted'),
               onTap: () => _clearRecents(context, ref),
             ),
             ListTile(
-              leading: const Icon(Icons.cleaning_services_outlined),
+              leading: const IconBadge(Icons.cleaning_services_outlined, color: Color(0xFFDB2777)),
               title: const Text('Clear temporary files'),
               subtitle: const Text('Scratch files from exports and sharing'),
               onTap: () => _clearTemp(context, ref),
@@ -178,7 +180,7 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: Text('Version ${AppInfo.version} (${AppInfo.build})'),
             ),
             ListTile(
-              leading: const Icon(Icons.description_outlined),
+              leading: const IconBadge(Icons.description_outlined, color: Color(0xFF64748B)),
               title: const Text('Open-source licenses'),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => showLicensePage(
@@ -396,8 +398,12 @@ class _PrivacyCard extends StatelessWidget {
       (Icons.analytics_outlined, 'No analytics or tracking', 'No usage data, crash reports or ads.'),
       (Icons.phonelink_lock_rounded, 'Files never leave this device', 'Only you decide what to share.'),
     ];
-    return Card(
-      color: s.secondaryContainer,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(Radius.circular(Radii.lg - 4)),
+        gradient: Brand.gradient(s.brightness),
+        boxShadow: softShadow(s),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(Space.md),
         child: Column(
@@ -409,14 +415,18 @@ class _PrivacyCard extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(icon, color: s.onSecondaryContainer),
+                      Container(
+                        padding: const EdgeInsets.all(Space.xs + 2),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
+                        child: Icon(icon, color: Colors.white, size: 20),
+                      ),
                       const SizedBox(width: Space.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(title, style: t.textTheme.titleSmall?.copyWith(color: s.onSecondaryContainer)),
-                            Text(body, style: t.textTheme.bodyMedium?.copyWith(color: s.onSecondaryContainer)),
+                            Text(title, style: t.textTheme.titleSmall?.copyWith(color: Colors.white)),
+                            Text(body, style: t.textTheme.bodyMedium?.copyWith(color: Colors.white)),
                           ],
                         ),
                       ),

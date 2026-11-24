@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../app_router.dart';
 import '../../core/models/document_ref.dart';
 import '../../ui/design_system/design_system.dart';
+import '../onboarding/default_app_guide_view.dart' show showDefaultAppGuideSheet;
 import 'open_document.dart';
 import 'recents_controller.dart';
 
@@ -20,6 +21,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _search = TextEditingController();
   String _query = '';
+  RecentFilter _filter = RecentFilter.all;
   bool _busy = false;
 
   @override
@@ -62,10 +64,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showAppSnackBar(
       context,
       'Removed “${e.doc.displayName}” from recents',
-      action: SnackBarAction(
-        label: 'Undo',
-        onPressed: () => ref.read(recentsProvider.notifier).restore(e, index),
-      ),
+      action: SnackBarAction(label: 'Undo', onPressed: () => ref.read(recentsProvider.notifier).restore(e, index)),
     );
   }
 
@@ -73,8 +72,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final recents = ref.watch(recentsProvider);
     final all = recents.value ?? const <RecentEntry>[];
-    final shown = filterRecents(all, _query);
+    final shown = filterRecents(all, _query, filter: _filter);
     final wide = windowSizeOf(context) != WindowSize.compact;
+    final t = Theme.of(context);
+    final gutter = contentGutter(context, maxWidth: wide ? 1200 : kMaxContentWidth);
+    // Short windows (landscape phones) and big text: a slimmer header with
+    // the quick actions as icons, so documents stay in view.
+    final compact = MediaQuery.sizeOf(context).height < 600 || MediaQuery.textScalerOf(context).scale(10) > 15;
 
     final List<Widget> slivers;
     if (recents.isLoading && !recents.hasValue) {
@@ -89,17 +93,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: FadeSlideIn(
             child: EmptyState(
               icon: Icons.picture_as_pdf_outlined,
-              illustration: const AppLogo(size: 104),
+              illustration: const AppLogo(size: 112),
               title: 'Your library is empty',
-              message: 'Open a PDF, Word, Markdown or text file from your device to start reading. '
+              message:
+                  'Open a PDF, Word, Excel, CSV, Markdown or text file from your device to start reading. '
                   'Everything stays on this device — no account, no cloud.',
-              action: PrimaryButton(
-                key: const Key('home.open'),
-                label: 'Open file',
-                icon: Icons.file_open_outlined,
-                busy: _busy,
-                onPressed: _openPdf,
-                semanticHint: 'Choose a PDF, Word, Markdown or text file from your device',
+              action: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PrimaryButton(
+                    key: const Key('home.open'),
+                    label: 'Open file',
+                    icon: Icons.file_open_outlined,
+                    busy: _busy,
+                    onPressed: _openPdf,
+                    semanticHint: 'Choose a PDF, Word, Excel, CSV, Markdown or text file from your device',
+                  ),
+                  const SizedBox(height: Space.lg),
+                  const _Highlights(),
+                ],
               ),
             ),
           ),
@@ -107,15 +119,79 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ];
     } else {
       slivers = [
-        SliverToBoxAdapter(child: _SearchField(controller: _search, onChanged: (q) => setState(() => _query = q))),
+        if (!compact)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: Space.md),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: QuickAction(
+                      icon: Icons.file_open_rounded,
+                      label: 'Open',
+                      tooltip: 'Open a file',
+                      color: Brand.gradientColors[0],
+                      onTap: _busy ? null : _openPdf,
+                    ),
+                  ),
+                  Expanded(
+                    child: QuickAction(
+                      icon: Icons.merge_type_rounded,
+                      label: 'Merge',
+                      tooltip: 'Merge PDFs',
+                      color: Brand.gradientColors[2],
+                      onTap: _busy ? null : _merge,
+                    ),
+                  ),
+                  Expanded(
+                    child: QuickAction(
+                      icon: Icons.verified_rounded,
+                      label: 'Set default',
+                      tooltip: 'Make PdfReader your default app',
+                      color: Brand.gradientColors[1],
+                      onTap: () => showDefaultAppGuideSheet(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 56,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(vertical: Space.xs),
+              itemCount: RecentFilter.values.length,
+              separatorBuilder: (_, _) => const SizedBox(width: Space.sm),
+              itemBuilder: (context, i) {
+                final f = RecentFilter.values[i];
+                final on = f == _filter;
+                final color = f == RecentFilter.all ? Brand.gradientColors[0] : FileTypeStyle.color(f.badge);
+                return ChoiceChip(
+                  key: Key('home.filter.${f.name}'),
+                  label: Text(f.label),
+                  selected: on,
+                  showCheckmark: false,
+                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                  avatar: f == RecentFilter.all
+                      ? null
+                      : Icon(FileTypeStyle.icon(f.badge), size: 18, color: on ? Colors.white : color),
+                  selectedColor: color,
+                  labelStyle: t.textTheme.labelLarge?.copyWith(color: on ? Colors.white : null),
+                  side: on ? BorderSide(color: color) : null,
+                  onSelected: (_) => setState(() => _filter = f),
+                );
+              },
+            ),
+          ),
+        ),
         SliverToBoxAdapter(
           child: SectionHeader(
-            _query.isEmpty ? 'Recent' : 'Results',
+            _query.isEmpty && _filter == RecentFilter.all ? 'Recent' : 'Results',
             trailing: Text(
               '${shown.length}',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+              style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.onSurfaceVariant),
               semanticsLabel: '${shown.length} documents',
             ),
           ),
@@ -125,7 +201,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: EmptyState(
               icon: Icons.search_off_rounded,
               title: 'No matches',
-              message: 'No recent file names contain “${_query.trim()}”.',
+              message: _query.trim().isEmpty
+                  ? 'No recent ${_filter.label} files.'
+                  : 'No recent file names contain “${_query.trim()}”.',
             ),
           )
         else if (wide)
@@ -177,39 +255,166 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ];
     }
 
-    return AppScaffold(
+    return Scaffold(
       key: const Key('home.screen'),
-      title: 'PdfReader',
-      maxContentWidth: wide ? 1200 : kMaxContentWidth,
-      actions: [
-        IconButton(
-          tooltip: 'Merge PDFs',
-          icon: const Icon(Icons.merge_type_rounded),
-          onPressed: _busy ? null : _merge,
-        ),
-        IconButton(
-          key: const Key('home.settings'),
-          tooltip: 'Settings',
-          icon: Icon(isCupertino(context) ? CupertinoIcons.settings : Icons.settings_outlined),
-          onPressed: () => context.push(Routes.settings),
-        ),
-        const SizedBox(width: Space.xs),
-      ],
       floatingActionButton: all.isEmpty
           ? null
           : Semantics(
-              hint: 'Choose a PDF, Word, Markdown or text file from your device',
-              child: FloatingActionButton.extended(
+              hint: 'Choose a PDF, Word, Excel, CSV, Markdown or text file from your device',
+              child: GradientFab(
                 key: const Key('home.open'),
                 onPressed: _busy ? null : _openPdf,
                 tooltip: 'Open a file',
-                icon: _busy
-                    ? AdaptiveProgress(size: 20, color: Theme.of(context).colorScheme.onPrimary)
-                    : const Icon(Icons.add_rounded),
+                icon: _busy ? const AdaptiveProgress(size: 20, color: Colors.white) : const Icon(Icons.add_rounded),
                 label: const Text('Open file'),
               ),
             ),
-      slivers: slivers,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _Header(
+              compact: compact,
+              actions: compact && all.isNotEmpty
+                  ? [
+                      IconButton(
+                        tooltip: 'Merge PDFs',
+                        icon: const Icon(Icons.merge_type_rounded),
+                        onPressed: _busy ? null : _merge,
+                      ),
+                      IconButton(
+                        tooltip: 'Make PdfReader your default app',
+                        icon: const Icon(Icons.verified_outlined),
+                        onPressed: () => showDefaultAppGuideSheet(context),
+                      ),
+                    ]
+                  : const [],
+              count: all.length,
+              search: all.isEmpty
+                  ? null
+                  : _SearchField(controller: _search, onChanged: (q) => setState(() => _query = q)),
+              gutter: gutter,
+            ),
+          ),
+          for (final s in slivers)
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: gutter),
+              sliver: s,
+            ),
+          const SliverPadding(padding: EdgeInsets.only(bottom: Space.xxl + Space.xxl)),
+        ],
+      ),
+    );
+  }
+}
+
+String _greeting(DateTime now) {
+  final h = now.hour;
+  if (h < 5) return 'Good night';
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.count,
+    required this.search,
+    required this.gutter,
+    this.compact = false,
+    this.actions = const [],
+  });
+  final int count;
+  final bool compact;
+  final List<Widget> actions;
+  final Widget? search;
+  final double gutter;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    const white70 = Colors.white; // full white keeps ≥ 4.5:1 across the gradient
+    return GradientHeader(
+      bottomPadding: search == null ? Space.lg : Space.lg,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(gutter, Space.sm, gutter - Space.sm, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const AppLogo(size: 36),
+                const SizedBox(width: Space.sm + 2),
+                Expanded(
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      'PdfReader',
+                      style: t.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+                ...actions,
+                IconButton(
+                  key: const Key('home.settings'),
+                  tooltip: 'Settings',
+                  color: Colors.white,
+                  icon: Icon(isCupertino(context) ? CupertinoIcons.settings : Icons.settings_outlined),
+                  onPressed: () => context.push(Routes.settings),
+                ),
+              ],
+            ),
+            if (!compact) ...[
+              const SizedBox(height: Space.lg),
+              Text(
+                _greeting(DateTime.now()),
+                style: t.textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: Space.xxs),
+              Text(
+                count == 0
+                    ? 'Private, offline reading for all your files'
+                    : '$count ${count == 1 ? 'document' : 'documents'} · offline & private',
+                style: t.textTheme.bodyMedium?.copyWith(color: white70),
+              ),
+            ],
+            if (search != null) ...[
+              const SizedBox(height: Space.md),
+              Padding(
+                padding: const EdgeInsets.only(right: Space.sm),
+                child: search!,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Highlights extends StatelessWidget {
+  const _Highlights();
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    Widget item(IconData icon, String label, Color c) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Space.sm),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconBadge(icon, color: c, size: 40),
+          const SizedBox(height: Space.xs),
+          Text(label, style: t.textTheme.labelMedium),
+        ],
+      ),
+    );
+    return Wrap(
+      alignment: WrapAlignment.center,
+      runSpacing: Space.sm,
+      children: [
+        item(Icons.wifi_off_rounded, 'Offline', Brand.gradientColors[0]),
+        item(Icons.lock_rounded, 'Private', Brand.gradientColors[1]),
+        item(Icons.block_rounded, 'No ads', Brand.gradientColors[2]),
+      ],
     );
   }
 }
@@ -241,9 +446,13 @@ class _SearchField extends StatelessWidget {
           )
         : SearchBar(
             controller: controller,
+            backgroundColor: WidgetStatePropertyAll(Theme.of(context).colorScheme.surface),
+            elevation: const WidgetStatePropertyAll(2),
+            side: const WidgetStatePropertyAll(BorderSide.none),
+            shape: const WidgetStatePropertyAll(StadiumBorder()),
             onChanged: onChanged,
             hintText: 'Search recent files',
-            leading: const Icon(Icons.search_rounded),
+            leading: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
             trailing: [
               ListenableBuilder(
                 listenable: controller,
@@ -251,7 +460,7 @@ class _SearchField extends StatelessWidget {
                     ? const SizedBox.shrink()
                     : IconButton(
                         tooltip: 'Clear search',
-                        icon: const Icon(Icons.close_rounded),
+                        icon: Icon(Icons.close_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         onPressed: () {
                           controller.clear();
                           onChanged('');
@@ -274,22 +483,22 @@ class _ItemMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PopupMenuButton<String>(
-        tooltip: 'More options for ${entry.doc.displayName}',
-        icon: const Icon(Icons.more_vert_rounded),
-        onSelected: (v) {
-          if (v == 'remove') onRemove();
-        },
-        itemBuilder: (_) => const [
-          PopupMenuItem(
-            value: 'remove',
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.playlist_remove_rounded),
-              title: Text('Remove from recents'),
-            ),
-          ),
-        ],
-      );
+    tooltip: 'More options for ${entry.doc.displayName}',
+    icon: const Icon(Icons.more_vert_rounded),
+    onSelected: (v) {
+      if (v == 'remove') onRemove();
+    },
+    itemBuilder: (_) => const [
+      PopupMenuItem(
+        value: 'remove',
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.playlist_remove_rounded),
+          title: Text('Remove from recents'),
+        ),
+      ),
+    ],
+  );
 }
 
 class _DismissBackground extends StatelessWidget {

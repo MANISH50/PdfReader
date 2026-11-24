@@ -10,3 +10,4 @@ export 'widgets/app_logo.dart';
 export 'widgets/basics.dart';
 export 'widgets/document_tile.dart';
 export 'widgets/fade_slide_in.dart';
+export 'widgets/fancy.dart';
